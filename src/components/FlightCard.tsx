@@ -24,41 +24,33 @@ export const FlightCard = ({
 }: FlightCardProps) => {
   return (
     <Card 
-      className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden"
+      className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
       onClick={onClick}
     >
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <span className="text-4xl">{flag}</span>
-            <div>
-              <h3 className="text-xl font-bold text-foreground">{city}</h3>
-              <p className="text-sm text-muted-foreground">{country}</p>
+      <CardContent className="p-3">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-2xl flex-shrink-0">{flag}</span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-bold text-foreground truncate">{city}</h3>
+              <p className="text-xs text-muted-foreground truncate">{country}</p>
             </div>
           </div>
-          <Plane className="h-5 w-5 text-primary transition-transform group-hover:translate-x-1" />
+          <Badge variant="destructive" className="text-xs font-semibold flex-shrink-0">
+            {discount}%
+          </Badge>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-primary">₩{price.toLocaleString()}</span>
-            <span className="text-sm text-muted-foreground line-through">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col">
+            <span className="text-xl font-bold text-primary leading-tight">₩{price.toLocaleString()}</span>
+            <span className="text-xs text-muted-foreground line-through">
               ₩{originalPrice.toLocaleString()}
             </span>
           </div>
-
-          <div className="flex items-center justify-between">
-            <Badge variant="destructive" className="font-semibold">
-              {discount}% 할인
-            </Badge>
-            <Button size="sm" className="font-semibold">
-              예약하기
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-border">
-          <p className="text-xs text-muted-foreground">다음 30일 중 최저가</p>
+          <Button size="sm" className="text-xs h-8 px-3">
+            예약
+          </Button>
         </div>
       </CardContent>
     </Card>
