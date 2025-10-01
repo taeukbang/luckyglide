@@ -1,0 +1,31 @@
+name: Daily Full Scan
+
+on:
+  schedule:
+    # 6시간마다 실행 (UTC 기준 매일 0,6,12,18시 → KST 09,15,21,03시)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      MRT_CAL_BASE: https://api3.myrealtrip.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run full scan (180 days)
+        run: SCAN_DAYS=180 npx tsx scripts/scan-all.ts
+

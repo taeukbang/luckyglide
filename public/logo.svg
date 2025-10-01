@@ -1,0 +1,12 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lg" x1="32" y1="32" x2="224" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00D1FF"/>
+      <stop offset="1" stop-color="#7A2CF6"/>
+    </linearGradient>
+  </defs>
+  <!-- Stylized wing/S mark -->
+  <path d="M64 56c32 36 80 46 112 72 24 20 36 54 18 94-24 54-118 42-138-26 26 22 70 22 78 8 9-16-26-36-58-48C46 138 36 99 64 56Z" fill="url(#lg)"/>
+  <path d="M68 164c21 20 59 18 58 32-1 9-25 12-50-6-10-7-17-16-24-42 5 5 10 10 16 16Z" fill="url(#lg)"/>
+</svg>
+
