@@ -2,7 +2,7 @@ export interface Flight {
   id: string;
   city: string;
   country: string;
-  flag: string;
+  countryCode: string;
   price: number;
   originalPrice: number;
   discount: number;
@@ -36,7 +36,7 @@ export const mockFlights: Flight[] = [
     id: "1",
     city: "도쿄",
     country: "일본",
-    flag: "🇯🇵",
+    countryCode: "jp",
     price: 245000,
     originalPrice: 380000,
     discount: 36,
@@ -46,7 +46,7 @@ export const mockFlights: Flight[] = [
     id: "2",
     city: "오사카",
     country: "일본",
-    flag: "🇯🇵",
+    countryCode: "jp",
     price: 198000,
     originalPrice: 320000,
     discount: 38,
@@ -56,7 +56,7 @@ export const mockFlights: Flight[] = [
     id: "3",
     city: "방콕",
     country: "태국",
-    flag: "🇹🇭",
+    countryCode: "th",
     price: 285000,
     originalPrice: 450000,
     discount: 37,
@@ -66,7 +66,7 @@ export const mockFlights: Flight[] = [
     id: "4",
     city: "다낭",
     country: "베트남",
-    flag: "🇻🇳",
+    countryCode: "vn",
     price: 165000,
     originalPrice: 280000,
     discount: 41,
@@ -76,7 +76,7 @@ export const mockFlights: Flight[] = [
     id: "5",
     city: "타이베이",
     country: "대만",
-    flag: "🇹🇼",
+    countryCode: "tw",
     price: 189000,
     originalPrice: 310000,
     discount: 39,
@@ -86,7 +86,7 @@ export const mockFlights: Flight[] = [
     id: "6",
     city: "홍콩",
     country: "중국",
-    flag: "🇭🇰",
+    countryCode: "hk",
     price: 278000,
     originalPrice: 420000,
     discount: 34,
@@ -96,7 +96,7 @@ export const mockFlights: Flight[] = [
     id: "7",
     city: "싱가포르",
     country: "싱가포르",
-    flag: "🇸🇬",
+    countryCode: "sg",
     price: 345000,
     originalPrice: 520000,
     discount: 34,
@@ -106,7 +106,7 @@ export const mockFlights: Flight[] = [
     id: "8",
     city: "세부",
     country: "필리핀",
-    flag: "🇵🇭",
+    countryCode: "ph",
     price: 225000,
     originalPrice: 380000,
     discount: 41,

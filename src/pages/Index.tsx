@@ -37,13 +37,13 @@ const Index = () => {
           <p className="text-muted-foreground">최대 41% 할인된 가격으로 여행을 떠나보세요</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {mockFlights.map((flight) => (
             <FlightCard
               key={flight.id}
               city={flight.city}
               country={flight.country}
-              flag={flight.flag}
+              countryCode={flight.countryCode}
               price={flight.price}
               originalPrice={flight.originalPrice}
               discount={flight.discount}
@@ -60,7 +60,7 @@ const Index = () => {
           onOpenChange={setDialogOpen}
           city={selectedFlight.city}
           country={selectedFlight.country}
-          flag={selectedFlight.flag}
+          countryCode={selectedFlight.countryCode}
           priceData={selectedFlight.priceHistory}
         />
       )}

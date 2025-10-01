@@ -22,7 +22,7 @@ interface FlightDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   city: string;
   country: string;
-  flag: string;
+  countryCode: string;
   priceData: {
     date: string;
     price: number;
@@ -34,7 +34,7 @@ export const FlightDetailDialog = ({
   onOpenChange,
   city,
   country,
-  flag,
+  countryCode,
   priceData,
 }: FlightDetailDialogProps) => {
   const [tripDuration, setTripDuration] = useState("3");
@@ -48,7 +48,11 @@ export const FlightDetailDialog = ({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-4xl">{flag}</span>
+            <img 
+              src={`https://flagcdn.com/w80/${countryCode}.png`}
+              alt={`${country} 국기`}
+              className="w-12 h-9 object-cover rounded"
+            />
             <div>
               <DialogTitle className="text-2xl">{city}</DialogTitle>
               <DialogDescription className="text-base">{country}</DialogDescription>
