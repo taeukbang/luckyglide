@@ -7,6 +7,7 @@ export interface Flight {
   price: number;
   originalPrice: number;
   discount: number;
+  travelDates: string;
   priceHistory: {
     date: string;
     price: number;
@@ -42,6 +43,7 @@ export const mockFlights: Flight[] = [
     price: 245000,
     originalPrice: 380000,
     discount: 36,
+    travelDates: "4/10-4/17",
     priceHistory: generatePriceHistory(245000),
   },
   {
@@ -53,6 +55,7 @@ export const mockFlights: Flight[] = [
     price: 198000,
     originalPrice: 320000,
     discount: 38,
+    travelDates: "4/5-4/12",
     priceHistory: generatePriceHistory(198000),
   },
   {
@@ -64,6 +67,7 @@ export const mockFlights: Flight[] = [
     price: 285000,
     originalPrice: 450000,
     discount: 37,
+    travelDates: "3/20-3/27",
     priceHistory: generatePriceHistory(285000),
   },
   {
@@ -75,6 +79,7 @@ export const mockFlights: Flight[] = [
     price: 165000,
     originalPrice: 280000,
     discount: 41,
+    travelDates: "3/15-3/22",
     priceHistory: generatePriceHistory(165000),
   },
   {
@@ -86,6 +91,7 @@ export const mockFlights: Flight[] = [
     price: 189000,
     originalPrice: 310000,
     discount: 39,
+    travelDates: "4/1-4/8",
     priceHistory: generatePriceHistory(189000),
   },
   {
@@ -97,6 +103,7 @@ export const mockFlights: Flight[] = [
     price: 278000,
     originalPrice: 420000,
     discount: 34,
+    travelDates: "3/25-4/1",
     priceHistory: generatePriceHistory(278000),
   },
   {
@@ -108,6 +115,7 @@ export const mockFlights: Flight[] = [
     price: 345000,
     originalPrice: 520000,
     discount: 34,
+    travelDates: "5/1-5/8",
     priceHistory: generatePriceHistory(345000),
   },
   {
@@ -119,6 +127,7 @@ export const mockFlights: Flight[] = [
     price: 225000,
     originalPrice: 380000,
     discount: 41,
+    travelDates: "4/15-4/22",
     priceHistory: generatePriceHistory(225000),
   },
 ];

@@ -118,11 +118,19 @@ const Index = () => {
               price={flight.price}
               originalPrice={flight.originalPrice}
               discount={flight.discount}
+              travelDates={flight.travelDates}
               onClick={() => handleFlightClick(flight)}
             />
           ))}
         </div>
       </main>
+
+      {/* Disclaimer */}
+      <footer className="container mx-auto px-4 py-6 text-center">
+        <p className="text-xs text-muted-foreground">
+          할인율은 해당 기간 중 최고가 대비 할인율을 의미합니다.
+        </p>
+      </footer>
 
       {/* Flight Detail Dialog */}
       {selectedFlight && (

@@ -8,6 +8,7 @@ interface FlightCardProps {
   price: number;
   originalPrice: number;
   discount: number;
+  travelDates: string;
   onClick: () => void;
 }
 
@@ -18,6 +19,7 @@ export const FlightCard = ({
   price,
   originalPrice,
   discount,
+  travelDates,
   onClick,
 }: FlightCardProps) => {
   return (
@@ -40,17 +42,17 @@ export const FlightCard = ({
           </div>
           
           <div className="flex flex-col items-end flex-shrink-0">
-            <span className="text-lg font-bold text-primary leading-tight">₩{price.toLocaleString()}</span>
+            <div className="flex items-center gap-1">
+              <span className="text-lg font-bold text-primary leading-tight">₩{price.toLocaleString()}</span>
+              <span className="text-xs text-success font-medium">(-{discount}%)</span>
+            </div>
             <span className="text-xs text-muted-foreground line-through leading-tight">
-              ₩{originalPrice.toLocaleString()}
+              ₩{originalPrice.toLocaleString()} ({travelDates})
             </span>
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-success font-medium">
-            최고가 대비 {discount}% 할인
-          </p>
+        <div className="flex items-center justify-end gap-2">
           <Button size="sm" className="text-xs h-7 px-3">
             예약
           </Button>
