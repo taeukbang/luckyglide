@@ -44,10 +44,10 @@ export const FlightCard = ({
           <div className="flex flex-col items-end flex-shrink-0">
             <div className="flex items-center gap-1">
               <span className="text-lg font-bold text-primary leading-tight">₩{price.toLocaleString()}</span>
-              <span className="text-xs text-success font-medium">(-{discount}%)</span>
+              <span className="text-xs text-destructive font-medium">(-{discount}%)</span>
             </div>
-            <span className="text-xs text-muted-foreground line-through leading-tight">
-              ₩{originalPrice.toLocaleString()} ({travelDates})
+            <span className="text-xs text-muted-foreground leading-tight">
+              ₩{originalPrice.toLocaleString()} ({travelDates}, 8일)
             </span>
           </div>
         </div>
