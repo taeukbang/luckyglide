@@ -47,7 +47,7 @@ export const FlightCard = ({
               <span className="text-xs text-destructive font-medium">(-{discount}%)</span>
             </div>
             <span className="text-xs text-muted-foreground leading-tight">
-              ₩{originalPrice.toLocaleString()} ({travelDates}, 8일)
+              ({travelDates}, 8일)
             </span>
           </div>
         </div>

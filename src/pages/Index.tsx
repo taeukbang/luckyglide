@@ -126,7 +126,7 @@ const Index = () => {
       </main>
 
       {/* Disclaimer */}
-      <footer className="container mx-auto px-4 py-6 text-center">
+      <footer className="container mx-auto px-4 py-6">
         <p className="text-xs text-muted-foreground">
           할인율은 해당 기간 중 최고가 대비 할인율을 의미합니다.
         </p>
