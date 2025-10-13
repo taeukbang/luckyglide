@@ -34,7 +34,7 @@ const Index = () => {
   };
 
   const handleInviteCodeSubmit = () => {
-    if (inviteCode.trim()) {
+    if (inviteCode === "LuckyGlide1") {
       setIsAuthenticated(true);
       setInviteCodeOpen(false);
     }
