@@ -208,13 +208,30 @@ const Index = () => {
         const hist = (data.items || []).map((d: any) => ({ date: d.date, price: Number(d.price) }));
         // 1) 상세 그래프 데이터 갱신
         setSelectedFlight((prev: any) => prev ? { ...prev, priceHistory: hist } : prev);
-        // 2) 그래프 기준 최신 최저가가 카드보다 낮으면 카드 가격도 동기 반영
-        const liveMin = hist.length ? Math.min(...hist.map((h: any) => Number(h.price))) : null;
-        if (typeof liveMin === 'number' && Number.isFinite(liveMin)) {
-          setItems((prev) => {
-            if (!Array.isArray(prev) || !selectedFlight?.code) return prev;
-            return prev.map((it) => it.code === selectedFlight.code ? { ...it, price: Math.min(Number(it.price ?? Infinity), liveMin) } as any : it);
-          });
+        // 2) 그래프 기준 최저가와 해당 날짜 쌍을 카드에도 동기 반영
+        if (hist.length) {
+          const best = hist.reduce((acc: any, cur: any) => (acc && acc.price <= cur.price ? acc : cur));
+          const liveMin = Number(best?.price);
+          if (Number.isFinite(liveMin)) {
+            const [mm, dd] = String(best.date).split("/");
+            const yyyy = new Date().getFullYear();
+            const depIso = `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+            const addDays = (iso: string, days: number) => {
+              const d0 = new Date(iso);
+              d0.setDate(d0.getDate() + days);
+              const y = d0.getFullYear();
+              const m = String(d0.getMonth() + 1).padStart(2, "0");
+              const da = String(d0.getDate()).padStart(2, "0");
+              return `${y}-${m}-${da}`;
+            };
+            const retIso = addDays(depIso, (dialogTripDays || 3) - 1);
+            setItems((prev) => {
+              if (!Array.isArray(prev) || !selectedFlight?.code) return prev;
+              return prev.map((it) => it.code === selectedFlight.code
+                ? { ...it, price: Math.min(Number(it.price ?? Infinity), liveMin), departureDate: depIso, returnDate: retIso, tripDays: dialogTripDays } as any
+                : it);
+            });
+          }
         }
       } catch (e) {
       } finally {
