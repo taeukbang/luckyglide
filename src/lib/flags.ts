@@ -15,6 +15,12 @@ export function flagUrlFromCountryCode(alpha2?: string | null, size: 48 | 24 = 2
   return `https://flagcdn.com/w${size}/${code}.png`;
 }
 
+export function fallbackFlagUrl(alpha2?: string | null) {
+  if (!alpha2) return "";
+  const code = alpha2.toUpperCase();
+  return `https://cdn.jsdelivr.net/npm/country-flag-icons/3x2/${code}.svg`;
+}
+
 export interface CountryMeta { countryKo: string; countryCode: string }
 
 // Minimal mapping for destinations used in this app (extend as needed)

@@ -17,7 +17,7 @@ import { PriceChart } from "./PriceChart";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
 import { buildMrtBookingUrl } from "@/lib/utils";
-import { emojiFromCountryCode } from "@/lib/flags";
+import { emojiFromCountryCode, flagUrlFromCountryCode } from "@/lib/flags";
 
 interface FlightDetailDialogProps {
   open: boolean;
@@ -61,8 +61,14 @@ export const FlightDetailDialog = ({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-9 rounded border border-border flex items-center justify-center text-2xl">
-              {emojiFromCountryCode(countryCode)}
+            <div className="w-12 h-9 rounded border border-border overflow-hidden flex items-center justify-center bg-muted">
+              <img
+                src={flagUrlFromCountryCode(countryCode, 24)}
+                alt={country}
+                width={24}
+                height={24}
+                className="object-contain"
+              />
             </div>
             <div>
               <DialogTitle className="text-2xl">{city}</DialogTitle>

@@ -1,4 +1,4 @@
-import { emojiFromCountryCode, flagUrlFromCountryCode } from "@/lib/flags";
+import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@/lib/flags";
 import { Card, CardContent } from "@/components/ui/card";
 import { buildMrtBookingUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,12 +42,17 @@ export const FlightCard = ({
             <div className="w-9 h-9 rounded-full border border-border overflow-hidden flex items-center justify-center bg-muted">
               {countryCode ? (
                 <img
-                  src={flagUrlFromCountryCode(countryCode, 24)}
+                  src={flagUrlFromCountryCode(countryCode, 24) || fallbackFlagUrl(countryCode)}
                   alt={country}
                   width={24}
                   height={24}
                   className="object-contain"
                   loading="lazy"
+                  onError={(e)=>{
+                    const img = e.currentTarget as HTMLImageElement;
+                    img.onerror = null;
+                    img.src = fallbackFlagUrl(countryCode) || "";
+                  }}
                 />
               ) : (
                 <span className="text-lg">{emojiFromCountryCode(countryCode)}</span>
