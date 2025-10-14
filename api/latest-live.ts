@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { DESTINATIONS } from "../server/cities";
+import { DESTINATIONS_MIN } from "./_cities";
 import { fetchCalendar as fetchCal } from "../server/myrealtrip";
 
 type LiveItem = {
@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const codesParam = req.query.codes ? String(req.query.codes) : "";
     const days = Number(req.query.days ?? 14);
 
-    let targets = DESTINATIONS;
+    let targets = DESTINATIONS_MIN;
     if (region && region !== "모두") targets = targets.filter((d) => d.region === region);
     if (codesParam) {
       const set = new Set(codesParam.split(",").map((s) => s.trim()).filter(Boolean));
