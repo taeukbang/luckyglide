@@ -24,6 +24,7 @@ export default async function handler(req: Request): Promise<Response> {
     const region = searchParams.get("region");
     const codesParam = String(searchParams.get("codes") ?? "");
     const days = Number(searchParams.get("days") ?? 14);
+    const tripDays = Number(searchParams.get("tripDays") ?? 7);
 
     let targets = DESTINATIONS_MIN;
     if (region && region !== "모두") targets = targets.filter((d) => d.region === region);
@@ -37,25 +38,38 @@ export default async function handler(req: Request): Promise<Response> {
 
     const items: LiveItem[] = [];
     for (const t of targets) {
-      // MyRealTrip 캘린더 직접 호출
-      const depStr = formatIso(base);
-      const url = `https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`;
-      const payload = { from, to: t.code, departureDate: depStr, period: days, transfer: -1, international: true, airlines: ["All"] };
-      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
-      if (!r.ok) throw new Error(`mrt ${r.status}`);
-      const data = await r.json();
-      const arr = data.flightCalendarInfoResults ?? [];
-      const best = arr.length ? arr.reduce((acc: any, cur: any) => (acc && acc.price <= cur.price ? acc : cur)) : null;
-      const worst = arr.length ? arr.reduce((mx: number, cur: any) => Math.max(mx, Number(cur.price)), 0) : null;
+      // 그래프와 동일 기준: 출발일을 days일만큼 순회하며 period=tripDays 창 내 최저가를 계산
+      let best: { price: number; date: string; airline: string } | null = null;
+      let worst: number | null = null;
+      for (let i = 0; i < days; i++) {
+        const dep = new Date(base);
+        dep.setDate(dep.getDate() + i);
+        const depStr = formatIso(dep);
+        const url = `https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`;
+        const payload = { from, to: t.code, departureDate: depStr, period: tripDays, transfer: -1, international: true, airlines: ["All"] };
+        const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+        if (!r.ok) continue;
+        const data = await r.json();
+        const slice = data.flightCalendarInfoResults?.slice(0, Math.max(tripDays, 1)) ?? [];
+        if (!slice.length) continue;
+        // 창 내 최저가(그래프 기준과 동일)
+        const localMin = slice.reduce((acc: any, cur: any) => (acc && acc.price <= cur.price ? acc : cur));
+        const localMax = slice.reduce((mx: number, cur: any) => Math.max(mx, Number(cur.price)), 0);
+        if (localMin) {
+          const p = Number(localMin.price);
+          if (!best || p < best.price) best = { price: p, date: String(localMin.date), airline: String(localMin.airline ?? "") };
+          worst = worst === null ? localMax : Math.max(worst, localMax);
+        }
+      }
       if (!best) {
         items.push({ code: t.code, city: t.nameKo, region: t.region, price: null, originalPrice: null, departureDate: null, returnDate: null, airline: null, tripDays: null });
       } else {
-        // best.date는 창 내 최저가 발생일. 기본 3~7일 중 대표 tripDays=7로 복귀일 계산(목록 표기를 위한 일관 값)
+        // best.date는 창 내 최저가 발생일. 요청 tripDays 기준 복귀일 계산
         const depIso = String(best.date);
         const ret = new Date(depIso);
-        ret.setDate(ret.getDate() + (7 - 1));
+        ret.setDate(ret.getDate() + (tripDays - 1));
         const retIso = formatIso(ret);
-        items.push({ code: t.code, city: t.nameKo, region: t.region, price: Number(best.price), originalPrice: worst, departureDate: depIso, returnDate: retIso, airline: String(best.airline ?? ""), tripDays: 7 });
+        items.push({ code: t.code, city: t.nameKo, region: t.region, price: Number(best.price), originalPrice: worst, departureDate: depIso, returnDate: retIso, airline: String(best.airline ?? ""), tripDays });
       }
     }
     return json({ count: items.length, items });
