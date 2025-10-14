@@ -1,4 +1,4 @@
-import { emojiFromCountryCode } from "@/lib/flags";
+import { emojiFromCountryCode, flagUrlFromCountryCode } from "@/lib/flags";
 import { Card, CardContent } from "@/components/ui/card";
 import { buildMrtBookingUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -39,8 +39,19 @@ export const FlightCard = ({
       <CardContent className="p-3">
         <div className="flex items-center justify-between gap-2 mb-1.5">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-lg">
-              {emojiFromCountryCode(countryCode)}
+            <div className="w-9 h-9 rounded-full border border-border overflow-hidden flex items-center justify-center bg-muted">
+              {countryCode ? (
+                <img
+                  src={flagUrlFromCountryCode(countryCode, 24)}
+                  alt={country}
+                  width={24}
+                  height={24}
+                  className="object-contain"
+                  loading="lazy"
+                />
+              ) : (
+                <span className="text-lg">{emojiFromCountryCode(countryCode)}</span>
+              )}
             </div>
             <div className="min-w-0">
               <h3 className="text-base font-bold text-foreground truncate">{city}</h3>

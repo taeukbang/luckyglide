@@ -8,6 +8,13 @@ export function emojiFromCountryCode(alpha2?: string | null) {
   return chars.join("");
 }
 
+// 국기 SVG URL 생성(https://flagcdn.com/ 기준, 48px)
+export function flagUrlFromCountryCode(alpha2?: string | null, size: 48 | 24 = 24) {
+  if (!alpha2) return "";
+  const code = alpha2.toLowerCase();
+  return `https://flagcdn.com/w${size}/${code}.png`;
+}
+
 export interface CountryMeta { countryKo: string; countryCode: string }
 
 // Minimal mapping for destinations used in this app (extend as needed)
@@ -24,7 +31,7 @@ export const codeToCountry: Record<string, CountryMeta> = {
   // 동남아/아시아
   DAD: { countryKo: "베트남", countryCode: "VN" }, SGN: { countryKo: "베트남", countryCode: "VN" }, HAN: { countryKo: "베트남", countryCode: "VN" },
   BKK: { countryKo: "태국", countryCode: "TH" }, CNX: { countryKo: "태국", countryCode: "TH" }, HKT: { countryKo: "태국", countryCode: "TH" },
-  CEB: { countryKo: "필리핀", countryCode: "PH" }, MNL: { countryKo: "필리핀", countryCode: "PH" },
+  CEB: { countryKo: "필리핀", countryCode: "PH" }, MNL: { countryKo: "필리핀", countryCode: "PH" }, CXR: { countryKo: "베트남", countryCode: "VN" },
   SIN: { countryKo: "싱가포르", countryCode: "SG" },
   BKI: { countryKo: "말레이시아", countryCode: "MY" }, KUL: { countryKo: "말레이시아", countryCode: "MY" },
   TPE: { countryKo: "대만", countryCode: "TW" }, TSA: { countryKo: "대만", countryCode: "TW" },
