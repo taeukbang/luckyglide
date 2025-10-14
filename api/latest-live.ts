@@ -1,6 +1,5 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+export const config = { runtime: "edge" };
 import { DESTINATIONS_MIN } from "./_cities";
-import { fetchCalendar as fetchCal } from "../server/myrealtrip";
 
 type LiveItem = {
   code: string; city: string; region: string;
@@ -16,16 +15,15 @@ function formatIso(d: Date) {
   return `${y}-${m}-${da}`;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  if (req.method === "OPTIONS") return res.status(200).end();
+export default async function handler(req: Request): Promise<Response> {
+  if ((req as any).method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders() });
 
   try {
-    const from = String(req.query.from ?? "ICN");
-    const region = req.query.region ? String(req.query.region) : null;
-    const codesParam = req.query.codes ? String(req.query.codes) : "";
-    const days = Number(req.query.days ?? 14);
+    const { searchParams } = new URL(req.url);
+    const from = String(searchParams.get("from") ?? "ICN");
+    const region = searchParams.get("region");
+    const codesParam = String(searchParams.get("codes") ?? "");
+    const days = Number(searchParams.get("days") ?? 14);
 
     let targets = DESTINATIONS_MIN;
     if (region && region !== "모두") targets = targets.filter((d) => d.region === region);
@@ -39,9 +37,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const items: LiveItem[] = [];
     for (const t of targets) {
-      // 단일 호출로 다음 days일 범위의 최소가 산출(서버리스 타임아웃 방지)
+      // MyRealTrip 캘린더 직접 호출
       const depStr = formatIso(base);
-      const data = await fetchCal({ from, to: t.code, departureDate: depStr, period: days, transfer: -1, international: true, airlines: ["All"] });
+      const url = `https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`;
+      const payload = { from, to: t.code, departureDate: depStr, period: days, transfer: -1, international: true, airlines: ["All"] };
+      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+      if (!r.ok) throw new Error(`mrt ${r.status}`);
+      const data = await r.json();
       const arr = data.flightCalendarInfoResults ?? [];
       const best = arr.length ? arr.reduce((acc: any, cur: any) => (acc && acc.price <= cur.price ? acc : cur)) : null;
       const worst = arr.length ? arr.reduce((mx: number, cur: any) => Math.max(mx, Number(cur.price)), 0) : null;
@@ -52,11 +54,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         items.push({ code: t.code, city: t.nameKo, region: t.region, price: Number(best.price), originalPrice: worst, departureDate: String(best.date), returnDate: null, airline: String(best.airline ?? ""), tripDays: null });
       }
     }
-
-    return res.status(200).json({ count: items.length, items });
+    return json({ count: items.length, items });
   } catch (e: any) {
-    return res.status(500).json({ error: e?.message ?? "internal error" });
+    return json({ error: e?.message ?? "internal error" }, 500);
   }
+}
+
+function json(body: any, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...corsHeaders() } });
+}
+function corsHeaders() {
+  return { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,OPTIONS" };
 }
 
 

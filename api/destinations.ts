@@ -1,13 +1,23 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+export const config = { runtime: "edge" };
 import { DESTINATIONS_MIN } from "./_cities";
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  if (req.method === "OPTIONS") return res.status(200).end();
+export default async function handler(req: Request): Promise<Response> {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders() });
+  }
+  try {
+    const regions = Array.from(new Set(DESTINATIONS_MIN.map((d) => d.region)));
+    return json({ regions, destinations: DESTINATIONS_MIN });
+  } catch (e: any) {
+    return json({ error: e?.message ?? "internal error" }, 500);
+  }
+}
 
-  const regions = Array.from(new Set(DESTINATIONS_MIN.map((d) => d.region)));
-  return res.status(200).json({ regions, destinations: DESTINATIONS_MIN });
+function json(body: any, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...corsHeaders() } });
+}
+function corsHeaders() {
+  return { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,OPTIONS" };
 }
 
 
