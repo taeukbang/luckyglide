@@ -16,6 +16,8 @@ import {
 import { PriceChart } from "./PriceChart";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
+import { buildMrtBookingUrl } from "@/lib/utils";
+import { emojiFromCountryCode } from "@/lib/flags";
 
 interface FlightDetailDialogProps {
   open: boolean;
@@ -23,10 +25,13 @@ interface FlightDetailDialogProps {
   city: string;
   country: string;
   countryCode: string;
+  code?: string; // IATA city/airport code for booking
   priceData: {
     date: string;
     price: number;
   }[];
+  tripDays?: number;
+  onTripDaysChange?: (n: number) => void;
 }
 
 export const FlightDetailDialog = ({
@@ -35,24 +40,30 @@ export const FlightDetailDialog = ({
   city,
   country,
   countryCode,
+  code,
   priceData,
+  tripDays = 3,
+  onTripDaysChange,
 }: FlightDetailDialogProps) => {
-  const [tripDuration, setTripDuration] = useState("3");
+  const [tripDuration, setTripDuration] = useState(String(tripDays));
+  // 부모 tripDays가 바뀌면 내부 선택값도 동기화 (카드의 여행일수 반영)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  if (String(tripDays) !== tripDuration) {
+    setTripDuration(String(tripDays));
+  }
 
-  const minPrice = Math.min(...priceData.map(d => d.price));
-  const maxPrice = Math.max(...priceData.map(d => d.price));
-  const avgPrice = Math.round(priceData.reduce((sum, d) => sum + d.price, 0) / priceData.length);
+  const minPrice = priceData.length ? Math.min(...priceData.map(d => d.price)) : 0;
+  const maxPrice = priceData.length ? Math.max(...priceData.map(d => d.price)) : 0;
+  const avgPrice = priceData.length ? Math.round(priceData.reduce((sum, d) => sum + d.price, 0) / priceData.length) : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <img 
-              src={`https://flagcdn.com/w80/${countryCode}.png`}
-              alt={`${country} 국기`}
-              className="w-12 h-9 object-cover rounded"
-            />
+            <div className="w-12 h-9 rounded border border-border flex items-center justify-center text-2xl">
+              {emojiFromCountryCode(countryCode)}
+            </div>
             <div>
               <DialogTitle className="text-2xl">{city}</DialogTitle>
               <DialogDescription className="text-base">{country}</DialogDescription>
@@ -82,7 +93,14 @@ export const FlightDetailDialog = ({
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <label className="text-sm font-medium">여행 기간</label>
               </div>
-              <Select value={tripDuration} onValueChange={setTripDuration}>
+              <Select
+                value={tripDuration}
+                onValueChange={(v) => {
+                  setTripDuration(v);
+                  const n = parseInt(v, 10);
+                  if (!Number.isNaN(n)) onTripDaysChange?.(n);
+                }}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -108,9 +126,41 @@ export const FlightDetailDialog = ({
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button className="flex-1" size="lg">
-              최저가 예약하기
-            </Button>
+            <a
+              className="flex-1"
+              href={(() => {
+                // 1) 최저가 날짜 선택
+                const best = (priceData || []).reduce<{date?: string; price?: number}>((acc, cur) => {
+                  if (!acc.date || (typeof acc.price === 'number' ? cur.price < acc.price! : true)) return { date: cur.date, price: cur.price };
+                  return acc;
+                }, {});
+                if (!best.date || !code) return "#";
+                // 2) MM/DD -> YYYY-MM-DD 변환
+                const now = new Date();
+                const yyyy = now.getFullYear();
+                const toIso = (mmdd: string) => {
+                  const [mm, dd] = mmdd.split("/");
+                  return `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+                };
+                const depIso = toIso(best.date);
+                // 3) 복귀일 = 출발일 + (tripDays-1) 그대로 사용 (스캔 표기와 일치)
+                const addDays = (iso: string, days: number) => {
+                  const d = new Date(iso);
+                  d.setDate(d.getDate() + days);
+                  const y = d.getFullYear();
+                  const m = String(d.getMonth() + 1).padStart(2, "0");
+                  const da = String(d.getDate()).padStart(2, "0");
+                  return `${y}-${m}-${da}`;
+                };
+                const days = parseInt(tripDuration, 10) || 3;
+                const retIso = addDays(depIso, days - 1);
+                return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso });
+              })()}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Button className="w-full" size="lg">최저가 예약하기</Button>
+            </a>
             <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
               닫기
             </Button>
