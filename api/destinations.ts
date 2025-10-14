@@ -1,13 +1,13 @@
 export const config = { runtime: "edge" };
-import { DESTINATIONS_MIN } from "./_cities";
+import { DESTINATIONS_ALL } from "./_cities";
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders() });
   }
   try {
-    const regions = Array.from(new Set(DESTINATIONS_MIN.map((d) => d.region)));
-    return json({ regions, destinations: DESTINATIONS_MIN });
+    const regions = Array.from(new Set(DESTINATIONS_ALL.map((d) => d.region)));
+    return json({ regions, destinations: DESTINATIONS_ALL });
   } catch (e: any) {
     return json({ error: e?.message ?? "internal error" }, 500);
   }

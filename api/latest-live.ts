@@ -1,5 +1,5 @@
 export const config = { runtime: "edge" };
-import { DESTINATIONS_MIN } from "./_cities";
+import { DESTINATIONS_ALL } from "./_cities";
 
 type LiveItem = {
   code: string; city: string; region: string;
@@ -26,7 +26,7 @@ export default async function handler(req: Request): Promise<Response> {
     const days = Number(searchParams.get("days") ?? 14);
     const tripDays = Number(searchParams.get("tripDays") ?? 7);
 
-    let targets = DESTINATIONS_MIN;
+    let targets = DESTINATIONS_ALL;
     if (region && region !== "모두") targets = targets.filter((d) => d.region === region);
     if (codesParam) {
       const set = new Set(codesParam.split(",").map((s) => s.trim()).filter(Boolean));
