@@ -28,8 +28,14 @@ export default async function handler(req: Request): Promise<Response> {
       if (!r.ok) continue;
       const data = await r.json();
       const slice = data.flightCalendarInfoResults?.slice(0, Math.max(tripDays, 1)) ?? [];
-      const min = slice.length ? slice.reduce((acc: number, cur: any) => Math.min(acc, Number(cur.price)), Number.POSITIVE_INFINITY) : null;
-      if (min !== null && Number.isFinite(min)) out.push({ date: `${mm}/${dd}`, price: Number(min) });
+      if (!slice.length) continue;
+      const localMin = slice.reduce((acc: any, cur: any) => (acc && acc.price <= cur.price ? acc : cur));
+      if (localMin && Number.isFinite(Number(localMin.price))) {
+        const d = new Date(String(localMin.date));
+        const mm2 = String(d.getMonth() + 1).padStart(2, "0");
+        const dd2 = String(d.getDate()).padStart(2, "0");
+        out.push({ date: `${mm2}/${dd2}`, price: Number(localMin.price) });
+      }
     }
     return json({ items: out });
   } catch (e: any) {
