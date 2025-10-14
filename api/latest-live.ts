@@ -50,8 +50,12 @@ export default async function handler(req: Request): Promise<Response> {
       if (!best) {
         items.push({ code: t.code, city: t.nameKo, region: t.region, price: null, originalPrice: null, departureDate: null, returnDate: null, airline: null, tripDays: null });
       } else {
-        // tripDays는 목록에서는 중요도가 낮으므로 null, 복귀일도 미표기
-        items.push({ code: t.code, city: t.nameKo, region: t.region, price: Number(best.price), originalPrice: worst, departureDate: String(best.date), returnDate: null, airline: String(best.airline ?? ""), tripDays: null });
+        // best.date는 창 내 최저가 발생일. 기본 3~7일 중 대표 tripDays=7로 복귀일 계산(목록 표기를 위한 일관 값)
+        const depIso = String(best.date);
+        const ret = new Date(depIso);
+        ret.setDate(ret.getDate() + (7 - 1));
+        const retIso = formatIso(ret);
+        items.push({ code: t.code, city: t.nameKo, region: t.region, price: Number(best.price), originalPrice: worst, departureDate: depIso, returnDate: retIso, airline: String(best.airline ?? ""), tripDays: 7 });
       }
     }
     return json({ count: items.length, items });
