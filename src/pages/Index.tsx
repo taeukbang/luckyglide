@@ -180,8 +180,8 @@ const Index = () => {
       .filter((it) => (selectedContinent === "모두" ? true : regionSet.has(it.region ?? "")))
       .map((it, idx) => {
         const price = it.price !== null && it.price !== undefined ? Number(it.price) : null as any;
-        const original = it.originalPrice !== null && it.originalPrice !== undefined ? Number(it.originalPrice) : (typeof price === 'number' ? Math.round(price * 1.3) : null as any);
-        const discount = (typeof price === 'number' && typeof original === 'number' && original > 0)
+        const original = (it.originalPrice !== null && it.originalPrice !== undefined && it.originalPrice !== "") ? Number(it.originalPrice) : null as any;
+        const discount = (typeof price === 'number' && typeof original === 'number' && original > price)
           ? Math.max(0, 100 - Math.round((price / original) * 100))
           : null;
         const travelDates = it.departureDate && it.returnDate ? `${it.departureDate}~${it.returnDate}` : "";
