@@ -22,20 +22,14 @@ export default async function handler(req: Request): Promise<Response> {
       const mm = String(dep.getMonth() + 1).padStart(2, "0");
       const dd = String(dep.getDate()).padStart(2, "0");
       const depStr = `${yyyy}-${mm}-${dd}`;
-      // Exact return date for the selected tripDays
-      const ret = new Date(depStr);
-      ret.setDate(ret.getDate() + Math.max(1, Number(tripDays)) - 1);
-      const ryyyy = ret.getFullYear();
-      const rmm = String(ret.getMonth() + 1).padStart(2, "0");
-      const rdd = String(ret.getDate()).padStart(2, "0");
-      const retStr = `${ryyyy}-${rmm}-${rdd}`;
       const url = `https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`;
       const payload = { from, to, departureDate: depStr, period: tripDays, transfer, international, airlines };
       const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       if (!r.ok) continue;
       const data = await r.json();
       const arr = data?.flightCalendarInfoResults ?? [];
-      const exact = arr.find((e: any) => String(e?.date) === retStr);
+      // Match by departure date explicitly
+      const exact = arr.find((e: any) => String(e?.date) === depStr);
       if (!exact || !Number.isFinite(Number(exact.price))) continue;
       // Chart x-axis: show DEPARTURE date (MM/DD) for clarity
       out.push({ date: `${mm}/${dd}`, price: Number(exact.price) });
