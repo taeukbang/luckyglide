@@ -22,20 +22,23 @@ export default async function handler(req: Request): Promise<Response> {
       const mm = String(dep.getMonth() + 1).padStart(2, "0");
       const dd = String(dep.getDate()).padStart(2, "0");
       const depStr = `${yyyy}-${mm}-${dd}`;
+      // Exact return date for the selected tripDays
+      const ret = new Date(depStr);
+      ret.setDate(ret.getDate() + Math.max(1, Number(tripDays)) - 1);
+      const ryyyy = ret.getFullYear();
+      const rmm = String(ret.getMonth() + 1).padStart(2, "0");
+      const rdd = String(ret.getDate()).padStart(2, "0");
+      const retStr = `${ryyyy}-${rmm}-${rdd}`;
       const url = `https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`;
       const payload = { from, to, departureDate: depStr, period: tripDays, transfer, international, airlines };
       const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       if (!r.ok) continue;
       const data = await r.json();
-      const slice = data.flightCalendarInfoResults?.slice(0, Math.max(tripDays, 1)) ?? [];
-      if (!slice.length) continue;
-      const localMin = slice.reduce((acc: any, cur: any) => (acc && acc.price <= cur.price ? acc : cur));
-      if (localMin && Number.isFinite(Number(localMin.price))) {
-        const d = new Date(String(localMin.date));
-        const mm2 = String(d.getMonth() + 1).padStart(2, "0");
-        const dd2 = String(d.getDate()).padStart(2, "0");
-        out.push({ date: `${mm2}/${dd2}`, price: Number(localMin.price) });
-      }
+      const arr = data?.flightCalendarInfoResults ?? [];
+      const exact = arr.find((e: any) => String(e?.date) === retStr);
+      if (!exact || !Number.isFinite(Number(exact.price))) continue;
+      // Chart x-axis: show DEPARTURE date (MM/DD) for clarity
+      out.push({ date: `${mm}/${dd}`, price: Number(exact.price) });
     }
     return json({ items: out });
   } catch (e: any) {
