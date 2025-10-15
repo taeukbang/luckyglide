@@ -114,24 +114,39 @@ const Index = () => {
         }));
         setItems(baseItems);
 
-        // C) 코드별 순차 호출(14일), 응답 즉시 해당 카드만 갱신
+        // C) 코드 묶음 단위 실시간 호출(14일) - 병렬 그룹 호출
         const codes = targets.map((t) => t.code);
-        for (const code of codes) {
-          if (controller.signal.aborted) return;
-          const url = `/api/latest-live?from=ICN&codes=${encodeURIComponent(code)}&days=14&minTripDays=3&maxTripDays=7`;
+        const groups = chunkArray(codes, 8); // 병렬 강도 조절
+
+        const fetchWithTimeout = async (url: string, ms = 12000) => {
+          const ctrl = new AbortController();
+          const id = setTimeout(() => ctrl.abort(), ms);
           try {
-            const res = await fetch(url, { signal: controller.signal });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            const item: LatestItem | undefined = (data.items || [])[0];
-            if (!item) continue;
-            setItems((prev) => prev.map((it) => it.code === item.code ? ({ ...it, ...item }) as LatestItem : it));
-          } catch (e) {
-            // 개별 실패는 무시하고 다음 코드 진행
+            const res = await fetch(url, { signal: ctrl.signal });
+            return res;
+          } finally {
+            clearTimeout(id);
           }
-          // UI 반응성을 위한 짧은 휴지
-          await new Promise((r) => setTimeout(r, 30));
-        }
+        };
+
+        const fetchGroup = async (group: string[]) => {
+          const url = `/api/latest-live?from=ICN&codes=${encodeURIComponent(group.join(","))}&days=14&minTripDays=3&maxTripDays=7`;
+          const res = await fetchWithTimeout(url, 12000);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          const batch: LatestItem[] = (data.items || []) as LatestItem[];
+
+          setItems((prev) => {
+            const byCode = new Map(prev.map((p) => [p.code, p]));
+            for (const it of batch) {
+              const cur = byCode.get(it.code);
+              byCode.set(it.code, { ...(cur || ({} as any)), ...it } as LatestItem);
+            }
+            return Array.from(byCode.values());
+          });
+        };
+
+        await Promise.allSettled(groups.map((g) => fetchGroup(g)));
       } catch (e: any) {
         if (e.name !== "AbortError") setError(e.message ?? "load error");
       } finally {
