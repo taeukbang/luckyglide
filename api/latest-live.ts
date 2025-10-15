@@ -39,7 +39,7 @@ export default async function handler(req: Request): Promise<Response> {
 
     const items: LiveItem[] = [];
     for (const t of targets) {
-      // 정확 일수 매칭: 출발일(D+days) × 체류일(len)에서 출발일(depStr) 항목 가격만 고려
+      // 정확 일수 매칭: 출발일(D+days) × 체류일(len)에서 복귀일 = 출발일+(len-1) 항목 가격을 사용
       let best: { price: number; dep: string; ret: string; airline: string; len: number } | null = null;
       let worstExact: number | null = null;
       for (let len = Math.max(1, minTripDays); len <= Math.max(minTripDays, maxTripDays); len++) {
@@ -53,10 +53,10 @@ export default async function handler(req: Request): Promise<Response> {
           if (!r.ok) continue;
           const data = await r.json();
           const arr = data.flightCalendarInfoResults ?? [];
-          const exact = arr.find((e: any) => String(e?.date) === depStr);
           const ret = new Date(depStr);
           ret.setDate(ret.getDate() + (len - 1));
           const retStr = formatIso(ret);
+          const exact = arr.find((e: any) => String(e?.date) === retStr);
           if (!exact) continue;
           const p = Number(exact.price);
           if (!Number.isFinite(p)) continue;

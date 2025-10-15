@@ -28,8 +28,14 @@ export default async function handler(req: Request): Promise<Response> {
       if (!r.ok) continue;
       const data = await r.json();
       const arr = data?.flightCalendarInfoResults ?? [];
-      // Match by departure date explicitly
-      const exact = arr.find((e: any) => String(e?.date) === depStr);
+      // Match by RETURN date: dep + (tripDays - 1) to align with MRT calendar UI
+      const ret = new Date(depStr);
+      ret.setDate(ret.getDate() + Math.max(1, Number(tripDays)) - 1);
+      const ryyyy = ret.getFullYear();
+      const rmm = String(ret.getMonth() + 1).padStart(2, "0");
+      const rdd = String(ret.getDate()).padStart(2, "0");
+      const retStr = `${ryyyy}-${rmm}-${rdd}`;
+      const exact = arr.find((e: any) => String(e?.date) === retStr);
       if (!exact || !Number.isFinite(Number(exact.price))) continue;
       // Chart x-axis: show DEPARTURE date (MM/DD) for clarity
       out.push({ date: `${mm}/${dd}`, price: Number(exact.price) });
