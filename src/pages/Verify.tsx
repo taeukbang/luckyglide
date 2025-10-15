@@ -101,6 +101,7 @@ export default function Verify() {
       setLiveLoading(true);
       const base = new Date();
       base.setDate(base.getDate() + 1);
+      // date: 출발일(MM/DD)
       let min: { date: string; price: number } | null = null;
       for (let i = 0; i < daysRange; i++) {
         const dep = new Date(base);
@@ -109,6 +110,13 @@ export default function Verify() {
         const m = String(dep.getMonth() + 1).padStart(2, "0");
         const d = String(dep.getDate()).padStart(2, "0");
         const depStr = `${y}-${m}-${d}`;
+        // 정확한 복귀일 = 출발일 + (tripDays - 1)
+        const ret = new Date(depStr);
+        ret.setDate(ret.getDate() + Math.max(1, tripDays) - 1);
+        const ry = ret.getFullYear();
+        const rm = String(ret.getMonth() + 1).padStart(2, "0");
+        const rd = String(ret.getDate()).padStart(2, "0");
+        const retStr = `${ry}-${rm}-${rd}`;
         const r = await fetch("https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -116,19 +124,14 @@ export default function Verify() {
         });
         if (!r.ok) continue;
         const data = await r.json();
-        const slice = (data?.flightCalendarInfoResults || []).slice(0, Math.max(1, tripDays));
-        if (!slice.length) continue;
-        for (const entry of slice) {
-          const p = Number(entry.price);
-          if (!Number.isFinite(p)) continue;
-          if (!min || p < min.price) {
-            // entry.date는 ISO(YYYY-MM-DD), 차트 표기에 맞춰 MM/DD로 변환
-            const dt = new Date(String(entry.date));
-            const mm = String(dt.getMonth() + 1).padStart(2, "0");
-            const dd = String(dt.getDate()).padStart(2, "0");
-            min = { date: `${mm}/${dd}`, price: p };
-          }
-        }
+        const arr = (data?.flightCalendarInfoResults || []);
+        // 체류일 정확 매칭: 복귀일(retStr)과 동일한 항목만 사용
+        const exact = arr.find((e: any) => String(e?.date) === retStr);
+        if (!exact) continue;
+        const p = Number(exact.price);
+        if (!Number.isFinite(p)) continue;
+        const depLabel = `${m}/${d}`; // 출발일 표기(MM/DD)
+        if (!min || p < min.price) min = { date: depLabel, price: p };
       }
       setLiveCalendarMin(min);
     } catch (e) {
