@@ -42,4 +42,12 @@ export function pickMinEntry(data: CalendarResponse) {
   return arr.reduce((min, cur) => (cur.price < (min?.price ?? Infinity) ? cur : min));
 }
 
+// Find exact entry by ISO date (YYYY-MM-DD). Returns null if not found.
+export function pickEntryByDate(data: CalendarResponse, isoDate: string) {
+  const arr = data.flightCalendarInfoResults ?? [];
+  if (!arr.length) return null;
+  const found = arr.find((e) => String(e.date) === String(isoDate));
+  return found ?? null;
+}
+
 

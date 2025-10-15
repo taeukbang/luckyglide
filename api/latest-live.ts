@@ -39,8 +39,8 @@ export default async function handler(req: Request): Promise<Response> {
 
     const items: LiveItem[] = [];
     for (const t of targets) {
-      // 절대 최저가: 출발일(D+days) × 체류일(min~max) 창 내 최저가 중 최솟값
-      let best: { price: number; date: string; airline: string; len: number } | null = null;
+      // 정확 일수 매칭: 출발일(D+days) × 체류일(len)에서 복귀일 = 출발일+(len-1) 항목 가격만 고려
+      let best: { price: number; dep: string; ret: string; airline: string; len: number } | null = null;
       let worst: number | null = null;
       for (let len = Math.max(1, minTripDays); len <= Math.max(minTripDays, maxTripDays); len++) {
         for (let i = 0; i < days; i++) {
@@ -52,26 +52,24 @@ export default async function handler(req: Request): Promise<Response> {
           const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
           if (!r.ok) continue;
           const data = await r.json();
-          const slice = data.flightCalendarInfoResults?.slice(0, Math.max(len, 1)) ?? [];
-          if (!slice.length) continue;
-          const localMin = slice.reduce((acc: any, cur: any) => (acc && acc.price <= cur.price ? acc : cur));
-          const localMax = slice.reduce((mx: number, cur: any) => Math.max(mx, Number(cur.price)), 0);
-          if (localMin) {
-            const p = Number(localMin.price);
-            if (!best || p < best.price) best = { price: p, date: String(localMin.date), airline: String(localMin.airline ?? ""), len };
-            worst = worst === null ? localMax : Math.max(worst, localMax);
-          }
+          const arr = data.flightCalendarInfoResults ?? [];
+          const ret = new Date(depStr);
+          ret.setDate(ret.getDate() + (len - 1));
+          const retStr = formatIso(ret);
+          const exact = arr.find((e: any) => String(e?.date) === retStr);
+          const localMax = arr.reduce((mx: number, cur: any) => Math.max(mx, Number(cur.price ?? 0)), 0);
+          if (!exact) continue;
+          const p = Number(exact.price);
+          if (!Number.isFinite(p)) continue;
+          if (!best || p < best.price) best = { price: p, dep: depStr, ret: retStr, airline: String(exact.airline ?? ""), len };
+          worst = worst === null ? localMax : Math.max(worst, localMax);
         }
       }
       if (!best) {
         items.push({ code: t.code, city: t.nameKo, region: t.region, price: null, originalPrice: null, departureDate: null, returnDate: null, airline: null, tripDays: null });
       } else {
-        // best.date는 창 내 최저가 발생일. 해당 len 기준 복귀일 계산
-        const depIso = String(best.date);
-        const ret = new Date(depIso);
-        ret.setDate(ret.getDate() + (best.len - 1));
-        const retIso = formatIso(ret);
-        items.push({ code: t.code, city: t.nameKo, region: t.region, price: Number(best.price), originalPrice: worst, departureDate: depIso, returnDate: retIso, airline: String(best.airline ?? ""), tripDays: best.len });
+        // best는 dep/ret가 확정된 정확 체류일 매칭 결과
+        items.push({ code: t.code, city: t.nameKo, region: t.region, price: Number(best.price), originalPrice: worst, departureDate: best.dep, returnDate: best.ret, airline: String(best.airline ?? ""), tripDays: best.len });
       }
     }
     return json({ count: items.length, items });

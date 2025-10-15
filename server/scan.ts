@@ -1,4 +1,4 @@
-import { fetchCalendar, CalendarEntry, pickMinEntry } from "./myrealtrip";
+import { fetchCalendar, CalendarEntry, pickMinEntry, CalendarResponse } from "./myrealtrip";
 import { supabase, hasSupabase } from "./supabase";
 
 export interface ScanParams {
@@ -47,7 +47,7 @@ export async function scanAndStore(params: ScanParams) {
 
       const depStr = formatDate(dep);
       // 캘린더 API는 출발일 기준으로 period 범위 가격을 반환
-      const data = await fetchCalendar({
+      const data: CalendarResponse = await fetchCalendar({
         from,
         to,
         departureDate: depStr,
@@ -57,12 +57,12 @@ export async function scanAndStore(params: ScanParams) {
         airlines: ["All"],
       });
 
-      // 창 전체에서의 최저가 항목을 선택하고, 해당 항목의 날짜를 출발일로 사용
-      const windowMin: CalendarEntry | null = pickMinEntry(data);
-      const depUseStr = windowMin?.date ?? depStr;
-      const depUse = new Date(depUseStr);
-      const retUse = new Date(depUse);
-      retUse.setDate(retUse.getDate() + (len - 1));
+      // 정확 체류일: 복귀일 = 출발일 + (len - 1) 항목만 사용
+      const retStr = formatDate(ret);
+      const exact = (data?.flightCalendarInfoResults ?? []).find((e: any) => String(e?.date) === retStr) as CalendarEntry | undefined;
+      const depUse = new Date(depStr);
+      const depUseStr = depStr;
+      const retUse = new Date(retStr);
 
       results.push({
         from,
@@ -70,8 +70,8 @@ export async function scanAndStore(params: ScanParams) {
         departure_date: depUseStr,
         return_date: formatDate(retUse),
         trip_days: len,
-        min_price: windowMin?.price ?? null,
-        min_airline: windowMin?.airline ?? null,
+        min_price: exact?.price ?? null,
+        min_airline: exact?.airline ?? null,
         collected_at: new Date().toISOString(),
       });
     }
