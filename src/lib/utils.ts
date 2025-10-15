@@ -38,8 +38,10 @@ export function buildMrtBookingUrl(params: { from: string; fromNameKo?: string; 
   push("orgArrctycd", ""); push("orgArrctycd", ""); push("orgArrctycd", ""); push("orgArrctycd", "");
   push("orgPreferaircd", "");
   push("preferaircd", "");
-  // Optional KSESID (session-specific). If provided via env, include.
-  const MRT_KSESID = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_MRT_KSESID) || undefined;
+  // Optional KSESID: hardcoded as requested. DO NOT include secrets in production repos in general.
+  const MRT_KSESID = "air:b2c:SELK138RB:SELK138RB::00";
   if (MRT_KSESID) push("KSESID", String(MRT_KSESID));
-  return `${base}?${qs.toString()}`;
+  const built = `${base}?${qs.toString()}`;
+  // Safety: ensure KSESID param exists even if URLSearchParams handling changes
+  return built.includes("KSESID=") ? built : `${built}&KSESID=${encodeURIComponent(MRT_KSESID)}`;
 }
