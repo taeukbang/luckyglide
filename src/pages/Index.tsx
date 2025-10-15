@@ -114,39 +114,37 @@ const Index = () => {
         }));
         setItems(baseItems);
 
-        // C) 코드 묶음 단위 실시간 호출(14일) - 병렬 그룹 호출
+        // C) 작은 동시성 풀(3)로 코드별 로딩, 응답 즉시 해당 카드만 갱신
         const codes = targets.map((t) => t.code);
-        const groups = chunkArray(codes, 8); // 병렬 강도 조절
 
-        const fetchWithTimeout = async (url: string, ms = 12000) => {
+        const fetchOne = async (code: string) => {
+          const url = `/api/latest-live?from=ICN&codes=${encodeURIComponent(code)}&days=14&minTripDays=3&maxTripDays=7`;
           const ctrl = new AbortController();
-          const id = setTimeout(() => ctrl.abort(), ms);
+          const id = setTimeout(() => ctrl.abort(), 12000);
           try {
             const res = await fetch(url, { signal: ctrl.signal });
-            return res;
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            const item: LatestItem | undefined = (data.items || [])[0];
+            if (!item) return;
+            setItems((prev) => prev.map((it) => it.code === item.code ? ({ ...it, ...item }) as LatestItem : it));
+          } catch (e) {
+            // 실패 시 다음 작업으로 진행
           } finally {
             clearTimeout(id);
           }
         };
 
-        const fetchGroup = async (group: string[]) => {
-          const url = `/api/latest-live?from=ICN&codes=${encodeURIComponent(group.join(","))}&days=14&minTripDays=3&maxTripDays=7`;
-          const res = await fetchWithTimeout(url, 12000);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
-          const batch: LatestItem[] = (data.items || []) as LatestItem[];
-
-          setItems((prev) => {
-            const byCode = new Map(prev.map((p) => [p.code, p]));
-            for (const it of batch) {
-              const cur = byCode.get(it.code);
-              byCode.set(it.code, { ...(cur || ({} as any)), ...it } as LatestItem);
+        const POOL = 3;
+        let idx = 0;
+        await Promise.all(
+          Array.from({ length: Math.min(POOL, codes.length) }).map(async () => {
+            while (idx < codes.length) {
+              const my = idx++;
+              await fetchOne(codes[my]);
             }
-            return Array.from(byCode.values());
-          });
-        };
-
-        await Promise.allSettled(groups.map((g) => fetchGroup(g)));
+          })
+        );
       } catch (e: any) {
         if (e.name !== "AbortError") setError(e.message ?? "load error");
       } finally {
@@ -213,7 +211,7 @@ const Index = () => {
         const res = await fetch('/api/calendar-window', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 30 }),
+          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 14 }),
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -221,31 +219,7 @@ const Index = () => {
         const hist = (data.items || []).map((d: any) => ({ date: d.date, price: Number(d.price) }));
         // 1) 상세 그래프 데이터 갱신
         setSelectedFlight((prev: any) => prev ? { ...prev, priceHistory: hist } : prev);
-        // 2) 그래프 기준 최저가와 해당 날짜 쌍을 카드에도 동기 반영
-        if (hist.length) {
-          const best = hist.reduce((acc: any, cur: any) => (acc && acc.price <= cur.price ? acc : cur));
-          const liveMin = Number(best?.price);
-          if (Number.isFinite(liveMin)) {
-            const [mm, dd] = String(best.date).split("/");
-            const yyyy = new Date().getFullYear();
-            const depIso = `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-            const addDays = (iso: string, days: number) => {
-              const d0 = new Date(iso);
-              d0.setDate(d0.getDate() + days);
-              const y = d0.getFullYear();
-              const m = String(d0.getMonth() + 1).padStart(2, "0");
-              const da = String(d0.getDate()).padStart(2, "0");
-              return `${y}-${m}-${da}`;
-            };
-            const retIso = addDays(depIso, (dialogTripDays || 3) - 1);
-            setItems((prev) => {
-              if (!Array.isArray(prev) || !selectedFlight?.code) return prev;
-              return prev.map((it) => it.code === selectedFlight.code
-                ? { ...it, price: Math.min(Number(it.price ?? Infinity), liveMin), departureDate: depIso, returnDate: retIso, tripDays: dialogTripDays } as any
-                : it);
-            });
-          }
-        }
+        // 카드 가격은 /api/latest-live 기준 유지(그래프는 비교용)
       } catch (e) {
       } finally {
         setChartLoading(false);
