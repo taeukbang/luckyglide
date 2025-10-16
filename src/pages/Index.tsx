@@ -194,10 +194,12 @@ const Index = () => {
             }
           }
         } catch {}
-        const res = await fetch('/api/calendar-window', {
+        // 기존 실시간 API 호출은 유지하되, DB 기반 엔드포인트로 대체 (주석 처리)
+        // const res = await fetch('/api/calendar-window', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 14 }), signal: controller.signal });
+        const res = await fetch('/api/calendar-window-db', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 14 }),
+          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 180 }),
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -254,10 +256,12 @@ const Index = () => {
             // 현재 선택된 체류일수 기준으로 그래프 재조회
             try {
               setChartLoading(true);
-              const res2 = await fetch('/api/calendar-window', {
+              // 기존 실시간 API 호출은 유지하되, DB 기반으로 대체 (주석)
+              // const res2 = await fetch('/api/calendar-window', {
+              const res2 = await fetch('/api/calendar-window-db', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from: 'ICN', to: code, tripDays: dialogTripDays, days: 14 }),
+                body: JSON.stringify({ from: 'ICN', to: code, tripDays: dialogTripDays, days: 180 }),
               });
               if (res2.ok) {
                 const data2 = await res2.json();
@@ -383,6 +387,7 @@ const Index = () => {
               meta={{ code: flight.code, tripDays: (flight as any).meta?.tripDays }}
               onClick={() => handleFlightClick(flight)}
               onShowChart={() => handleFlightClick(flight)}
+              // 새로고침 기능은 유지하되 UI는 숨김 처리됨
               onRefresh={() => handleRefresh(flight.code)}
               refreshLoading={refreshingCodes.has(flight.code)}
               justRefreshed={justRefreshedCodes.has(flight.code)}
@@ -393,9 +398,10 @@ const Index = () => {
 
       {/* Disclaimer */}
       <footer className="container mx-auto px-4 py-6">
-        <p className="text-xs text-muted-foreground">
-          할인율은 해당 기간 중 최고가 대비 할인율을 의미합니다.
-        </p>
+        <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+          <li>할인율은 해당 기간 중 최고가 대비 할인율을 의미합니다.</li>
+          <li>가격은 1인 기준입니다.</li>
+        </ul>
       </footer>
 
       {/* Flight Detail Dialog */}
@@ -409,7 +415,10 @@ const Index = () => {
           code={selectedFlight.meta?.code}
           priceData={selectedFlight.priceHistory}
           tripDays={dialogTripDays}
-          onTripDaysChange={(n)=> setDialogTripDays(n)}
+          onTripDaysChange={(n)=> {
+            // 트립 기간 변경 시 즉시 차트 리로드 트리거
+            setDialogTripDays(n);
+          }}
           collectedAt={(selectedFlight as any).collectedAt}
           onRefresh={() => handleRefresh(selectedFlight.code)}
           refreshLoading={refreshingCodes.has(selectedFlight.code)}

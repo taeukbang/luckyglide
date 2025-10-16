@@ -26,6 +26,6 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Run full scan
-        run: npx tsx scripts/scan-all.ts
+      - name: Run full scan (180 days)
+        run: SCAN_DAYS=180 npx tsx scripts/scan-all.ts
 

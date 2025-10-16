@@ -159,11 +159,13 @@ export const FlightDetailDialog = ({
 
           <div className="space-y-2">
             <h4 className="font-semibold text-lg">날짜별 가격 추이</h4>
-            <PriceChart data={priceData} tripDays={parseInt(String(tripDuration), 10) || (tripDays || 3)} />
+            {/* 기간 변경 시 강제 리마운트로 그래프 갱신 보장 */}
+            <PriceChart key={`chart-${tripDuration}`} data={priceData} tripDays={parseInt(String(tripDuration), 10) || (tripDays || 3)} />
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={onRefresh} disabled={!!refreshLoading}>
+            {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
+            <Button variant="outline" className="hidden" onClick={onRefresh} disabled={!!refreshLoading}>
               {refreshLoading ? '새로고침 중…' : '새로고침'}
             </Button>
             <a

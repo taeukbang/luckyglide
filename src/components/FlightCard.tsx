@@ -105,7 +105,8 @@ export const FlightCard = ({
         </div>
 
         <div className="flex items-center justify-end gap-2">
-          <Button size="sm" className="text-xs h-7 px-3" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
+          {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
+          <Button size="sm" className="text-xs h-7 px-3 hidden" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
             {refreshLoading ? '새로고침 중…' : '새로고침'}
           </Button>
           <a

@@ -380,6 +380,82 @@ app.post("/api/calendar-window", async (req, res) => {
   }
 });
 
+// DB 기반 창 가격: 특정 체류일 tripDays로 startDate~days 동안, fares_latest(또는 최신 rows)에서 가격을 구성
+// body: { from, to, startDate?: YYYY-MM-DD (default: tomorrow), days?: number (<= 180), tripDays: number }
+app.post("/api/calendar-window-db", async (req, res) => {
+  try {
+    const { from = "ICN", to, startDate, days = 180, tripDays = 3 } = req.body || {};
+    if (!to) return res.status(400).json({ error: "to is required" });
+    if (!hasSupabase) return res.status(500).json({ error: "Supabase env missing" });
+
+    const base = startDate ? new Date(startDate) : new Date();
+    if (!startDate) base.setDate(base.getDate() + 1);
+
+    // 날짜 목록 구성
+    const isoDates: string[] = [];
+    for (let i = 0; i < Math.min(180, Number(days)); i++) {
+      const d = new Date(base);
+      d.setDate(d.getDate() + i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      isoDates.push(`${yyyy}-${mm}-${dd}`);
+    }
+
+    // 최신 스냅샷(is_latest=true)에서 해당 출발일/복귀일 정확 매칭 가격 추출
+    // 주: Supabase에서 IN 절 길이 제한에 유의(분할 필요 시 분할). 여기서는 단순 구현.
+    const depDates = isoDates;
+    const retDates = isoDates.map((depIso) => {
+      const d = new Date(depIso);
+      d.setDate(d.getDate() + Math.max(1, Number(tripDays)) - 1);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    });
+
+    // 단순화: 출발/복귀가 각각 depDates/retDates 안에 있는 최근 is_latest=true 행을 시간순으로 가져온 뒤 매핑
+    // is_latest=true 만 보지 말고, 동일 셀(departure/return/trip_days)의 '가장 최근 수집'을 사용
+    const { data, error } = await supabase
+      .from("fares")
+      .select("departure_date, return_date, trip_days, min_price, collected_at")
+      .eq("from", from)
+      .eq("to", to)
+      .in("departure_date", depDates)
+      .in("return_date", retDates)
+      .order("collected_at", { ascending: false })
+      .order("departure_date", { ascending: true });
+    if (error) throw error;
+
+    // 동일 출발일(키: MM/DD)에 대해 가장 최근 수집 1건만 사용
+    const map = new Map<string, number>();
+    for (const r of (data ?? [])) {
+      const mmdd = (() => {
+        const d = new Date(r.departure_date as any);
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const da = String(d.getDate()).padStart(2, "0");
+        return `${m}/${da}`;
+      })();
+      if (map.has(mmdd)) continue; // 이미 최신 값 선택됨
+      const priceNum = (r as any).min_price !== null && (r as any).min_price !== undefined ? Number((r as any).min_price) : NaN;
+      if (!Number.isNaN(priceNum)) map.set(mmdd, priceNum);
+    }
+
+    const items = isoDates.map((iso) => {
+      const d = new Date(iso);
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      const mmdd = `${m}/${da}`;
+      const p = map.get(mmdd);
+      return (p !== undefined) ? { date: mmdd, price: p } : null;
+    }).filter(Boolean);
+
+    return res.json({ items });
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message ?? "internal error" });
+  }
+});
+
 const PORT = Number(process.env.PORT ?? 8787);
 app.listen(PORT, () => console.log(`server listening on http://localhost:${PORT}`));
 
