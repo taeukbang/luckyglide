@@ -53,7 +53,7 @@ export const FlightCard = ({
   };
   return (
     <Card 
-      className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
+      className={`group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${refreshLoading === false ? 'lg-flash' : ''}`}
       onClick={onClick}
     >
       <CardContent className="p-3">

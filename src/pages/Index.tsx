@@ -194,6 +194,7 @@ const Index = () => {
   }, [dialogOpen, selectedFlight?.code, dialogTripDays]);
 
   const [refreshingCode, setRefreshingCode] = useState<string | null>(null);
+  const [justRefreshedCode, setJustRefreshedCode] = useState<string | null>(null);
   const handleRefresh = async (code: string) => {
     try {
       setRefreshingCode(code);
@@ -245,6 +246,9 @@ const Index = () => {
               setChartLoading(false);
             }
           }
+          // 반짝 효과 트리거
+          setJustRefreshedCode(code);
+          setTimeout(() => setJustRefreshedCode((prev) => prev === code ? null : prev), 900);
         }
       }
     } catch (e) {
@@ -344,7 +348,7 @@ const Index = () => {
               onClick={() => handleFlightClick(flight)}
               onShowChart={() => handleFlightClick(flight)}
               onRefresh={() => handleRefresh(flight.code)}
-              refreshLoading={refreshingCode === flight.code}
+              refreshLoading={refreshingCode === flight.code ? true : (justRefreshedCode === flight.code ? false : undefined as any)}
             />
           ))}
         </div>
