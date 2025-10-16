@@ -415,17 +415,19 @@ app.post("/api/calendar-window-db", async (req, res) => {
     });
 
     // 단순화: 출발/복귀가 각각 depDates/retDates 안에 있는 최근 is_latest=true 행을 시간순으로 가져온 뒤 매핑
+    // is_latest=true 만 보지 말고, 동일 셀(departure/return/trip_days)의 '가장 최근 수집'을 사용
     const { data, error } = await supabase
       .from("fares")
-      .select("departure_date, return_date, min_price")
+      .select("departure_date, return_date, trip_days, min_price, collected_at")
       .eq("from", from)
       .eq("to", to)
-      .eq("is_latest", true)
       .in("departure_date", depDates)
       .in("return_date", retDates)
+      .order("collected_at", { ascending: false })
       .order("departure_date", { ascending: true });
     if (error) throw error;
 
+    // 동일 출발일(키: MM/DD)에 대해 가장 최근 수집 1건만 사용
     const map = new Map<string, number>();
     for (const r of (data ?? [])) {
       const mmdd = (() => {
@@ -434,7 +436,8 @@ app.post("/api/calendar-window-db", async (req, res) => {
         const da = String(d.getDate()).padStart(2, "0");
         return `${m}/${da}`;
       })();
-      const priceNum = r.min_price !== null && r.min_price !== undefined ? Number(r.min_price) : NaN;
+      if (map.has(mmdd)) continue; // 이미 최신 값 선택됨
+      const priceNum = (r as any).min_price !== null && (r as any).min_price !== undefined ? Number((r as any).min_price) : NaN;
       if (!Number.isNaN(priceNum)) map.set(mmdd, priceNum);
     }
 

@@ -45,12 +45,12 @@ export default async function handler(req: Request): Promise<Response> {
       for (const retC of retChunks) {
         const { data, error } = await supabase
           .from("fares")
-          .select("departure_date, return_date, min_price")
+          .select("departure_date, return_date, trip_days, min_price, collected_at")
           .eq("from", from)
           .eq("to", to)
-          .eq("is_latest", true)
           .in("departure_date", depC)
           .in("return_date", retC)
+          .order("collected_at", { ascending: false })
           .order("departure_date", { ascending: true });
         if (error) throw error;
         if (data) results.push(...data);
@@ -63,7 +63,8 @@ export default async function handler(req: Request): Promise<Response> {
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
       const key = `${mm}/${dd}`;
-      const val = r.min_price !== null && r.min_price !== undefined ? Number(r.min_price) : NaN;
+      if (map.has(key)) continue; // 최신 수집 우선
+      const val = (r as any).min_price !== null && (r as any).min_price !== undefined ? Number((r as any).min_price) : NaN;
       if (!Number.isNaN(val)) map.set(key, val);
     }
 
