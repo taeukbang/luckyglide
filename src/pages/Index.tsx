@@ -256,10 +256,12 @@ const Index = () => {
             // 현재 선택된 체류일수 기준으로 그래프 재조회
             try {
               setChartLoading(true);
-              const res2 = await fetch('/api/calendar-window', {
+              // 기존 실시간 API 호출은 유지하되, DB 기반으로 대체 (주석)
+              // const res2 = await fetch('/api/calendar-window', {
+              const res2 = await fetch('/api/calendar-window-db', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from: 'ICN', to: code, tripDays: dialogTripDays, days: 14 }),
+                body: JSON.stringify({ from: 'ICN', to: code, tripDays: dialogTripDays, days: 180 }),
               });
               if (res2.ok) {
                 const data2 = await res2.json();
