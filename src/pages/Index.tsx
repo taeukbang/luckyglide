@@ -172,6 +172,28 @@ const Index = () => {
     const loadHistory = async (tripDays: number) => {
       try {
         setChartLoading(true);
+        // 다이얼로그 오픈 시 DB 최신값으로 상단 정보(collectedAt 포함) 동기화
+        try {
+          const qs = new URLSearchParams();
+          qs.set('from', 'ICN');
+          qs.set('codes', selectedFlight.code);
+          const latestRes = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
+          if (latestRes.ok) {
+            const data = await latestRes.json();
+            const item = (data.items || [])[0];
+            if (item) {
+              setSelectedFlight((prev: any) => prev ? {
+                ...prev,
+                // 카드 메타 동일 유지, 상단 표기 값만 최신 반영
+                price: (item.price !== null && item.price !== undefined) ? Number(item.price) : (null as any),
+                originalPrice: (item.originalPrice !== null && item.originalPrice !== undefined) ? Number(item.originalPrice) : null,
+                travelDates: item.departureDate && item.returnDate ? `${item.departureDate}~${item.returnDate}` : prev.travelDates,
+                meta: { ...(prev.meta||{}), tripDays: (item.tripDays !== null && item.tripDays !== undefined) ? Number(item.tripDays) : (prev.meta?.tripDays) },
+                collectedAt: item.collectedAt ?? prev.collectedAt,
+              } : prev);
+            }
+          }
+        } catch {}
         const res = await fetch('/api/calendar-window', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -389,6 +411,9 @@ const Index = () => {
           tripDays={dialogTripDays}
           onTripDaysChange={(n)=> setDialogTripDays(n)}
           collectedAt={(selectedFlight as any).collectedAt}
+          onRefresh={() => handleRefresh(selectedFlight.code)}
+          refreshLoading={refreshingCodes.has(selectedFlight.code)}
+          justRefreshed={justRefreshedCodes.has(selectedFlight.code)}
         />
       )}
     </div>

@@ -33,6 +33,9 @@ interface FlightDetailDialogProps {
   tripDays?: number;
   onTripDaysChange?: (n: number) => void;
   collectedAt?: string | null;
+  onRefresh?: () => void;
+  refreshLoading?: boolean;
+  justRefreshed?: boolean;
 }
 
 export const FlightDetailDialog = ({
@@ -46,6 +49,9 @@ export const FlightDetailDialog = ({
   tripDays = 3,
   onTripDaysChange,
   collectedAt,
+  onRefresh,
+  refreshLoading,
+  justRefreshed,
 }: FlightDetailDialogProps) => {
   const [tripDuration, setTripDuration] = useState(String(tripDays));
   // 부모 tripDays가 바뀌면 내부 선택값도 동기화 (카드의 여행일수 반영)
@@ -60,7 +66,7 @@ export const FlightDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`max-w-3xl max-h-[90vh] overflow-y-auto ${justRefreshed ? 'lg-flash-outline' : ''}`}>
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-9 rounded border border-border overflow-hidden flex items-center justify-center bg-muted">
@@ -157,6 +163,9 @@ export const FlightDetailDialog = ({
           </div>
 
           <div className="flex gap-3 pt-4">
+            <Button variant="outline" onClick={onRefresh} disabled={!!refreshLoading}>
+              {refreshLoading ? '새로고침 중…' : '새로고침'}
+            </Button>
             <a
               className="flex-1"
               href={(() => {
