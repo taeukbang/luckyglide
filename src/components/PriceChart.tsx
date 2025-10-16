@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot } from "recharts";
 
 interface PriceChartProps {
   data: {
@@ -37,6 +37,19 @@ export const PriceChart = ({ data, tripDays }: PriceChartProps) => {
     );
   };
 
+  const minPoint = (data && data.length)
+    ? data.reduce((acc, cur) => (cur.price < acc.price ? cur : acc))
+    : null as any;
+
+  const CustomDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    const isMin = !!(minPoint && payload?.date === minPoint.date && Number(payload?.price) === Number(minPoint.price));
+    const r = isMin ? 6 : 2;
+    const fill = isMin ? "hsl(var(--destructive))" : "hsl(var(--primary))";
+    const stroke = isMin ? "hsl(var(--destructive))" : "hsl(var(--primary))";
+    return <circle cx={cx} cy={cy} r={r} fill={fill} stroke={stroke} strokeWidth={isMin ? 2 : 1} />;
+  };
+
   return (
     <div className="w-full h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
@@ -53,7 +66,10 @@ export const PriceChart = ({ data, tripDays }: PriceChartProps) => {
             tickFormatter={(value) => `₩${(value / 10000).toFixed(0)}만`}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Line type="monotone" dataKey="price" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="price" stroke="hsl(var(--primary))" strokeWidth={2} dot={<CustomDot />} />
+          {minPoint ? (
+            <ReferenceDot x={minPoint.date} y={minPoint.price} r={8} fill="transparent" stroke="hsl(var(--destructive))" strokeWidth={2} />
+          ) : null}
         </LineChart>
       </ResponsiveContainer>
     </div>
