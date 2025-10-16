@@ -103,6 +103,9 @@ export const FlightCard = ({
         </div>
 
         <div className="flex items-center justify-end gap-2">
+          <Button size="sm" className="text-xs h-7 px-3" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
+            {refreshLoading ? '새로고침 중…' : '새로고침'}
+          </Button>
           <a
             href={(() => {
               const [depIso, retIsoRaw] = travelDates.split("~");
@@ -117,9 +120,6 @@ export const FlightCard = ({
               예약
             </Button>
           </a>
-          <Button size="sm" className="text-xs h-7 px-3" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
-            {refreshLoading ? '새로고침 중…' : '새로고침'}
-          </Button>
           <Button size="sm" className="text-xs h-7 px-3 bg-green-600 hover:bg-green-700" variant="default" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
             가격 변동 확인
           </Button>

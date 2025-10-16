@@ -219,6 +219,32 @@ const Index = () => {
             collectedAt: item.collectedAt ?? '',
             tripDays: (item.tripDays !== null && item.tripDays !== undefined) ? Number(item.tripDays) : null,
           }) : p));
+          // 상세 다이얼로그가 해당 목적지를 보고 있다면, 그래프 데이터도 새로 불러오고 수집시점 동기화
+          setSelectedFlight((prev: any) => {
+            if (!prev || prev.code !== code) return prev;
+            return {
+              ...prev,
+              collectedAt: item.collectedAt ?? '',
+            };
+          });
+          if (dialogOpen && selectedFlight?.code === code) {
+            // 현재 선택된 체류일수 기준으로 그래프 재조회
+            try {
+              setChartLoading(true);
+              const res2 = await fetch('/api/calendar-window', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ from: 'ICN', to: code, tripDays: dialogTripDays, days: 14 }),
+              });
+              if (res2.ok) {
+                const data2 = await res2.json();
+                const hist = (data2.items || []).map((d: any) => ({ date: d.date, price: Number(d.price) }));
+                setSelectedFlight((prev: any) => prev ? { ...prev, priceHistory: hist } : prev);
+              }
+            } finally {
+              setChartLoading(false);
+            }
+          }
         }
       }
     } catch (e) {

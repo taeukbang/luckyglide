@@ -17,7 +17,7 @@ import { PriceChart } from "./PriceChart";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
 import { buildMrtBookingUrl } from "@/lib/utils";
-import { emojiFromCountryCode, flagUrlFromCountryCode } from "@/lib/flags";
+import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@/lib/flags";
 
 interface FlightDetailDialogProps {
   open: boolean;
@@ -64,13 +64,22 @@ export const FlightDetailDialog = ({
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-9 rounded border border-border overflow-hidden flex items-center justify-center bg-muted">
-              <img
-                src={flagUrlFromCountryCode(countryCode, 24)}
-                alt={country}
-                width={24}
-                height={24}
-                className="object-contain"
-              />
+              {countryCode ? (
+                <img
+                  src={flagUrlFromCountryCode(countryCode, 24) || fallbackFlagUrl(countryCode)}
+                  alt={country}
+                  width={24}
+                  height={24}
+                  className="object-contain"
+                  onError={(e)=>{
+                    const img = e.currentTarget as HTMLImageElement;
+                    img.onerror = null;
+                    img.src = fallbackFlagUrl(countryCode) || "";
+                  }}
+                />
+              ) : (
+                <span className="text-lg">{emojiFromCountryCode(countryCode)}</span>
+              )}
             </div>
             <div>
               <DialogTitle className="text-2xl">{city}</DialogTitle>
