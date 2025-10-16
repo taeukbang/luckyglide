@@ -421,6 +421,7 @@ app.post("/api/calendar-window-db", async (req, res) => {
       .select("departure_date, return_date, trip_days, min_price, collected_at")
       .eq("from", from)
       .eq("to", to)
+      .eq("is_latest", true)
       .in("departure_date", depDates)
       .in("return_date", retDates)
       .order("collected_at", { ascending: false })

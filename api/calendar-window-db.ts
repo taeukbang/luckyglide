@@ -48,6 +48,7 @@ export default async function handler(req: Request): Promise<Response> {
           .select("departure_date, return_date, trip_days, min_price, collected_at")
           .eq("from", from)
           .eq("to", to)
+          .eq("is_latest", true)
           .in("departure_date", depC)
           .in("return_date", retC)
           .order("collected_at", { ascending: false })
