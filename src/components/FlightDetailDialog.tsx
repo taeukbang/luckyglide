@@ -159,8 +159,8 @@ export const FlightDetailDialog = ({
 
           <div className="space-y-2">
             <h4 className="font-semibold text-lg">날짜별 가격 추이</h4>
-            {/* 기존 실시간 API 기반 PriceChart 데이터 로딩은 유지. 아래에서 DB기반으로 교체 */}
-            <PriceChart data={priceData} tripDays={parseInt(String(tripDuration), 10) || (tripDays || 3)} />
+            {/* 기간 변경 시 강제 리마운트로 그래프 갱신 보장 */}
+            <PriceChart key={`chart-${tripDuration}`} data={priceData} tripDays={parseInt(String(tripDuration), 10) || (tripDays || 3)} />
           </div>
 
           <div className="flex gap-3 pt-4">

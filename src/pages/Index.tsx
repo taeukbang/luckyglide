@@ -414,7 +414,10 @@ const Index = () => {
           code={selectedFlight.meta?.code}
           priceData={selectedFlight.priceHistory}
           tripDays={dialogTripDays}
-          onTripDaysChange={(n)=> setDialogTripDays(n)}
+          onTripDaysChange={(n)=> {
+            // 트립 기간 변경 시 즉시 차트 리로드 트리거
+            setDialogTripDays(n);
+          }}
           collectedAt={(selectedFlight as any).collectedAt}
           onRefresh={() => handleRefresh(selectedFlight.code)}
           refreshLoading={refreshingCodes.has(selectedFlight.code)}
