@@ -194,10 +194,12 @@ const Index = () => {
             }
           }
         } catch {}
-        const res = await fetch('/api/calendar-window', {
+        // 기존 실시간 API 호출은 유지하되, DB 기반 엔드포인트로 대체 (주석 처리)
+        // const res = await fetch('/api/calendar-window', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 14 }), signal: controller.signal });
+        const res = await fetch('/api/calendar-window-db', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 14 }),
+          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 180 }),
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -383,6 +385,7 @@ const Index = () => {
               meta={{ code: flight.code, tripDays: (flight as any).meta?.tripDays }}
               onClick={() => handleFlightClick(flight)}
               onShowChart={() => handleFlightClick(flight)}
+              // 새로고침 기능은 유지하되 UI는 숨김 처리됨
               onRefresh={() => handleRefresh(flight.code)}
               refreshLoading={refreshingCodes.has(flight.code)}
               justRefreshed={justRefreshedCodes.has(flight.code)}

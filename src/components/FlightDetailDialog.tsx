@@ -159,11 +159,13 @@ export const FlightDetailDialog = ({
 
           <div className="space-y-2">
             <h4 className="font-semibold text-lg">날짜별 가격 추이</h4>
+            {/* 기존 실시간 API 기반 PriceChart 데이터 로딩은 유지. 아래에서 DB기반으로 교체 */}
             <PriceChart data={priceData} tripDays={parseInt(String(tripDuration), 10) || (tripDays || 3)} />
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={onRefresh} disabled={!!refreshLoading}>
+            {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
+            <Button variant="outline" className="hidden" onClick={onRefresh} disabled={!!refreshLoading}>
               {refreshLoading ? '새로고침 중…' : '새로고침'}
             </Button>
             <a
