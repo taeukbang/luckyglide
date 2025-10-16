@@ -1,44 +1,60 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface PriceChartProps {
   data: {
     date: string;
     price: number;
   }[];
+  tripDays: number;
 }
 
-export const PriceChart = ({ data }: PriceChartProps) => {
+export const PriceChart = ({ data, tripDays }: PriceChartProps) => {
+  const toMMDD = (d: Date) => {
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const da = String(d.getDate()).padStart(2, "0");
+    return `${m}/${da}`;
+  };
+  const parseMMDD = (mmdd: string) => {
+    const [mm, dd] = String(mmdd).split("/");
+    const base = new Date();
+    const dt = new Date(base.getFullYear(), Math.max(0, Number(mm) - 1), Number(dd));
+    return dt;
+  };
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || !payload.length) return null;
+    const price = Number(payload[0]?.value);
+    const dep = parseMMDD(label);
+    const arr = new Date(dep);
+    const len = Math.max(1, Number(tripDays) || 1);
+    arr.setDate(arr.getDate() + (len - 1));
+    return (
+      <div style={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, padding: 8 }}>
+        <div style={{ color: "hsl(var(--foreground))", fontSize: 12 }}>출발일: {toMMDD(dep)}</div>
+        <div style={{ color: "hsl(var(--foreground))", fontSize: 12 }}>도착일: {toMMDD(arr)}</div>
+        <div style={{ color: "hsl(var(--foreground))", fontSize: 12, marginTop: 4 }}>가격: ₩{price.toLocaleString()}</div>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis 
-            dataKey="date" 
+          <XAxis
+            dataKey="date"
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
             stroke="hsl(var(--border))"
           />
-          <YAxis 
+          <YAxis
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
             stroke="hsl(var(--border))"
             tickFormatter={(value) => `₩${(value / 10000).toFixed(0)}만`}
           />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "hsl(var(--popover))",
-              border: "1px solid hsl(var(--border))",
-              borderRadius: "var(--radius)",
-            }}
-            labelStyle={{ color: "hsl(var(--foreground))" }}
-            formatter={(value: number) => [`₩${value.toLocaleString()}`, "가격"]}
-          />
-          <Bar 
-            dataKey="price" 
-            fill="hsl(var(--primary))" 
-            radius={[8, 8, 0, 0]}
-            animationDuration={500}
-          />
-        </BarChart>
+          <Tooltip content={<CustomTooltip />} />
+          <Line type="monotone" dataKey="price" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );

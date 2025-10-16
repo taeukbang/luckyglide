@@ -159,7 +159,7 @@ export const FlightDetailDialog = ({
 
           <div className="space-y-2">
             <h4 className="font-semibold text-lg">날짜별 가격 추이</h4>
-            <PriceChart data={priceData} />
+            <PriceChart data={priceData} tripDays={parseInt(String(tripDuration), 10) || (tripDays || 3)} />
           </div>
 
           <div className="flex gap-3 pt-4">
