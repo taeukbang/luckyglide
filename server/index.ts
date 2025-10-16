@@ -51,15 +51,16 @@ app.post("/api/scan", async (req, res) => {
     now.setDate(now.getDate() + 1); // 내일
     const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+    // 단일 목적지만 빠르게 스캔 (기본 14일 윈도우)
     const result = await scanAndStore({
       from: fromQ,
       to: toQ,
       startDate,
-      days: 30,
+      days: 14,
       minTripDays: 3,
       maxTripDays: 7,
     });
-    res.json(result);
+    res.json({ ok: true, ...result });
   } catch (e: any) {
     res.status(500).json({ error: e?.message ?? "internal error" });
   }
@@ -107,11 +108,18 @@ app.get("/api/latest", async (req, res) => {
   try {
     const from = String(req.query.from ?? "ICN");
     const region = req.query.region ? String(req.query.region) : null;
+    const codesParam = req.query.codes ? String(req.query.codes) : "";
 
     // 대상 도시: 지역이 지정되면 해당 지역만, "모두" 또는 미지정이면 전체
     let targets = DESTINATIONS;
     if (region && region !== "모두") {
       targets = targets.filter((d) => d.region === region);
+    }
+    if (codesParam) {
+      const set = new Set(codesParam.split(",").map((s) => s.trim()).filter(Boolean));
+      if (set.size > 0) {
+        targets = targets.filter((d) => set.has(d.code));
+      }
     }
     const codes = targets.map((d) => d.code);
 
@@ -127,9 +135,26 @@ app.get("/api/latest", async (req, res) => {
       .in("to", codes);
     if (errExt) throw errExt;
 
+    // 최근 수집 시점(해당 목적지의 latest rows 중 최대 collected_at)
+    const { data: recentRows, error: errRecent } = await supabase
+      .from("fares")
+      .select("to,collected_at")
+      .eq("from", from)
+      .in("to", codes)
+      .eq("is_latest", true)
+      .order("collected_at", { ascending: false });
+    if (errRecent) throw errRecent;
+
     const byTo = new Map<string, any>((extrema ?? []).map((r: any) => [r.to, r]));
+    const latestCollectedByTo = new Map<string, string>();
+    for (const row of (recentRows ?? [])) {
+      if (!latestCollectedByTo.has(row.to)) {
+        latestCollectedByTo.set(row.to, row.collected_at as any);
+      }
+    }
     const itemsOut = targets.map((t) => {
       const r = byTo.get(t.code);
+      const lastCollected = latestCollectedByTo.get(t.code) ?? r?.collected_at ?? null;
       return {
         code: t.code,
         city: t.nameKo,
@@ -142,7 +167,7 @@ app.get("/api/latest", async (req, res) => {
         departureDate: r?.departure_date ?? null,
         returnDate: r?.return_date ?? null,
         airline: r?.min_airline ?? null,
-        collectedAt: r?.collected_at ?? null,
+        collectedAt: lastCollected,
       };
     });
 

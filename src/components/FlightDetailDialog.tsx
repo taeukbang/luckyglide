@@ -17,7 +17,7 @@ import { PriceChart } from "./PriceChart";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
 import { buildMrtBookingUrl } from "@/lib/utils";
-import { emojiFromCountryCode, flagUrlFromCountryCode } from "@/lib/flags";
+import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@/lib/flags";
 
 interface FlightDetailDialogProps {
   open: boolean;
@@ -32,6 +32,10 @@ interface FlightDetailDialogProps {
   }[];
   tripDays?: number;
   onTripDaysChange?: (n: number) => void;
+  collectedAt?: string | null;
+  onRefresh?: () => void;
+  refreshLoading?: boolean;
+  justRefreshed?: boolean;
 }
 
 export const FlightDetailDialog = ({
@@ -44,6 +48,10 @@ export const FlightDetailDialog = ({
   priceData,
   tripDays = 3,
   onTripDaysChange,
+  collectedAt,
+  onRefresh,
+  refreshLoading,
+  justRefreshed,
 }: FlightDetailDialogProps) => {
   const [tripDuration, setTripDuration] = useState(String(tripDays));
   // 부모 tripDays가 바뀌면 내부 선택값도 동기화 (카드의 여행일수 반영)
@@ -58,17 +66,26 @@ export const FlightDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`max-w-3xl max-h-[90vh] overflow-y-auto ${justRefreshed ? 'lg-flash-outline' : ''}`}>
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-9 rounded border border-border overflow-hidden flex items-center justify-center bg-muted">
-              <img
-                src={flagUrlFromCountryCode(countryCode, 24)}
-                alt={country}
-                width={24}
-                height={24}
-                className="object-contain"
-              />
+              {countryCode ? (
+                <img
+                  src={flagUrlFromCountryCode(countryCode, 24) || fallbackFlagUrl(countryCode)}
+                  alt={country}
+                  width={24}
+                  height={24}
+                  className="object-contain"
+                  onError={(e)=>{
+                    const img = e.currentTarget as HTMLImageElement;
+                    img.onerror = null;
+                    img.src = fallbackFlagUrl(countryCode) || "";
+                  }}
+                />
+              ) : (
+                <span className="text-lg">{emojiFromCountryCode(countryCode)}</span>
+              )}
             </div>
             <div>
               <DialogTitle className="text-2xl">{city}</DialogTitle>
@@ -92,6 +109,20 @@ export const FlightDetailDialog = ({
               <p className="text-xl font-bold text-destructive">₩{maxPrice.toLocaleString()}</p>
             </div>
           </div>
+
+          {collectedAt ? (
+            <div className="text-xs text-muted-foreground">가격 수집 시점: {(() => {
+              try {
+                const d = new Date(collectedAt);
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const da = String(d.getDate()).padStart(2, '0');
+                const hh = String(d.getHours()).padStart(2, '0');
+                const mm = String(d.getMinutes()).padStart(2, '0');
+                return `${y}-${m}-${da} ${hh}:${mm}`;
+              } catch { return collectedAt; }
+            })()}</div>
+          ) : null}
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -132,6 +163,9 @@ export const FlightDetailDialog = ({
           </div>
 
           <div className="flex gap-3 pt-4">
+            <Button variant="outline" onClick={onRefresh} disabled={!!refreshLoading}>
+              {refreshLoading ? '새로고침 중…' : '새로고침'}
+            </Button>
             <a
               className="flex-1"
               href={(() => {

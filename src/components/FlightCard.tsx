@@ -11,12 +11,16 @@ interface FlightCardProps {
   originalPrice?: number | null;
   discount?: number | null;
   travelDates: string;
+  collectedAt?: string | null;
   meta?: {
     code?: string;
     tripDays?: number;
   };
   onClick: () => void;
   onShowChart?: () => void;
+  onRefresh?: () => void;
+  refreshLoading?: boolean;
+  justRefreshed?: boolean;
 }
 
 export const FlightCard = ({
@@ -27,13 +31,31 @@ export const FlightCard = ({
   originalPrice,
   discount,
   travelDates,
+  collectedAt,
   onClick,
   meta,
   onShowChart,
+  onRefresh,
+  refreshLoading,
+  justRefreshed,
 }: FlightCardProps) => {
+  const formatCollected = (iso?: string | null) => {
+    if (!iso) return null;
+    try {
+      const d = new Date(iso);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      return `${y}-${m}-${da} ${hh}:${mm}`;
+    } catch {
+      return null;
+    }
+  };
   return (
     <Card 
-      className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
+      className={`group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${justRefreshed ? 'lg-flash-outline' : ''}`}
       onClick={onClick}
     >
       <CardContent className="p-3">
@@ -76,10 +98,16 @@ export const FlightCard = ({
             <span className="text-xs text-muted-foreground leading-tight">
               ({travelDates}{meta?.tripDays ? `, ${meta.tripDays}일` : ""})
             </span>
+            {formatCollected(collectedAt) ? (
+              <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">수집 {formatCollected(collectedAt)}</span>
+            ) : null}
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-2">
+          <Button size="sm" className="text-xs h-7 px-3" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
+            {refreshLoading ? '새로고침 중…' : '새로고침'}
+          </Button>
           <a
             href={(() => {
               const [depIso, retIsoRaw] = travelDates.split("~");
