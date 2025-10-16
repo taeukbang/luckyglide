@@ -20,6 +20,7 @@ interface FlightCardProps {
   onShowChart?: () => void;
   onRefresh?: () => void;
   refreshLoading?: boolean;
+  justRefreshed?: boolean;
 }
 
 export const FlightCard = ({
@@ -36,6 +37,7 @@ export const FlightCard = ({
   onShowChart,
   onRefresh,
   refreshLoading,
+  justRefreshed,
 }: FlightCardProps) => {
   const formatCollected = (iso?: string | null) => {
     if (!iso) return null;
@@ -53,7 +55,7 @@ export const FlightCard = ({
   };
   return (
     <Card 
-      className={`group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${refreshLoading === false ? 'lg-flash' : ''}`}
+      className={`group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${justRefreshed ? 'lg-flash-outline' : ''}`}
       onClick={onClick}
     >
       <CardContent className="p-3">

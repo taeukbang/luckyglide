@@ -193,11 +193,11 @@ const Index = () => {
     return () => controller.abort();
   }, [dialogOpen, selectedFlight?.code, dialogTripDays]);
 
-  const [refreshingCode, setRefreshingCode] = useState<string | null>(null);
-  const [justRefreshedCode, setJustRefreshedCode] = useState<string | null>(null);
+  const [refreshingCodes, setRefreshingCodes] = useState<Set<string>>(new Set());
+  const [justRefreshedCodes, setJustRefreshedCodes] = useState<Set<string>>(new Set());
   const handleRefresh = async (code: string) => {
     try {
-      setRefreshingCode(code);
+      setRefreshingCodes(prev => new Set(prev).add(code));
       // 서버에 해당 목적지만 스캔 요청 → DB 최신값 갱신
       const res = await fetch(`/api/scan?from=${encodeURIComponent('ICN')}&to=${encodeURIComponent(code)}`, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -246,14 +246,28 @@ const Index = () => {
               setChartLoading(false);
             }
           }
-          // 반짝 효과 트리거
-          setJustRefreshedCode(code);
-          setTimeout(() => setJustRefreshedCode((prev) => prev === code ? null : prev), 900);
+          // 반짝 효과 트리거 (코드별)
+          setJustRefreshedCodes(prev => {
+            const s = new Set(prev);
+            s.add(code);
+            return s;
+          });
+          setTimeout(() => {
+            setJustRefreshedCodes(prev => {
+              const s = new Set(prev);
+              s.delete(code);
+              return s;
+            });
+          }, 1000);
         }
       }
     } catch (e) {
     } finally {
-      setRefreshingCode(null);
+      setRefreshingCodes(prev => {
+        const s = new Set(prev);
+        s.delete(code);
+        return s;
+      });
     }
   };
 
@@ -348,7 +362,8 @@ const Index = () => {
               onClick={() => handleFlightClick(flight)}
               onShowChart={() => handleFlightClick(flight)}
               onRefresh={() => handleRefresh(flight.code)}
-              refreshLoading={refreshingCode === flight.code ? true : (justRefreshedCode === flight.code ? false : undefined as any)}
+              refreshLoading={refreshingCodes.has(flight.code)}
+              justRefreshed={justRefreshedCodes.has(flight.code)}
             />
           ))}
         </div>

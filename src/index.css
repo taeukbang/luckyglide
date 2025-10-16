@@ -12,6 +12,18 @@
   animation: lg-flash-bg 800ms ease-out;
 }
 
+/* Blue outline flash to signal update */
+@keyframes lg-flash-outline-kf {
+  0% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  15% { box-shadow: 0 0 0 2px rgba(59,130,246,0.9); }
+  85% { box-shadow: 0 0 0 2px rgba(59,130,246,0.9); }
+  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+}
+
+.lg-flash-outline {
+  animation: lg-flash-outline-kf 1000ms ease-out;
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
