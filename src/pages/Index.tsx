@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FlightCard } from "@/components/FlightCard";
 import { FlightDetailDialog } from "@/components/FlightDetailDialog";
 // import { mockFlights, Flight } from "@/data/mockFlights";
-import { Plane } from "lucide-react";
+// import { Plane } from "lucide-react";
 import { codeToCountry, emojiFromCountryCode } from "@/lib/flags";
 import {
   Select,
@@ -327,8 +327,8 @@ const Index = () => {
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary rounded-lg">
-              <Plane className="h-6 w-6 text-primary-foreground" />
+            <div className="p-2 rounded-lg">
+              <img src="/logo.svg" alt="LuckyGlide" className="h-8 w-8" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">LuckyGlide</h1>
