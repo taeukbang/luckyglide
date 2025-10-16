@@ -398,9 +398,10 @@ const Index = () => {
 
       {/* Disclaimer */}
       <footer className="container mx-auto px-4 py-6">
-        <p className="text-xs text-muted-foreground">
-          할인율은 해당 기간 중 최고가 대비 할인율을 의미합니다.
-        </p>
+        <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+          <li>할인율은 해당 기간 중 최고가 대비 할인율을 의미합니다.</li>
+          <li>가격은 1인 기준입니다.</li>
+        </ul>
       </footer>
 
       {/* Flight Detail Dialog */}
