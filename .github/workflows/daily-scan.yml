@@ -2,8 +2,8 @@ name: Daily Full Scan
 
 on:
   schedule:
-    # 매일 00:00 KST ≈ 15:00 UTC
-    - cron: '0 15 * * *'
+    # 6시간마다 실행 (UTC 기준 매일 0,6,12,18시 → KST 09,15,21,03시)
+    - cron: '0 */6 * * *'
   workflow_dispatch: {}
 
 jobs:
