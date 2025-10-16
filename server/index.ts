@@ -429,25 +429,30 @@ app.post("/api/calendar-window-db", async (req, res) => {
     if (error) throw error;
 
     // 동일 출발일(키: MM/DD)에 대해 가장 최근 수집 1건만 사용
-    const map = new Map<string, number>();
+    // 정확 페어 매칭 및 연도 포함 키(ISO)로 중복 제거
+    const priceByDepIso = new Map<string, number>();
     for (const r of (data ?? [])) {
-      const mmdd = (() => {
-        const d = new Date(r.departure_date as any);
+      const depIso = String(r.departure_date);
+      const expectedRet = (() => {
+        const d = new Date(depIso);
+        d.setDate(d.getDate() + Math.max(1, Number(tripDays)) - 1);
+        const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, "0");
         const da = String(d.getDate()).padStart(2, "0");
-        return `${m}/${da}`;
+        return `${y}-${m}-${da}`;
       })();
-      if (map.has(mmdd)) continue; // 이미 최신 값 선택됨
+      if (String(r.return_date) !== expectedRet) continue; // 다른 체류일 행 무시
+      if (priceByDepIso.has(depIso)) continue; // 최신 값만 사용
       const priceNum = (r as any).min_price !== null && (r as any).min_price !== undefined ? Number((r as any).min_price) : NaN;
-      if (!Number.isNaN(priceNum)) map.set(mmdd, priceNum);
+      if (!Number.isNaN(priceNum)) priceByDepIso.set(depIso, priceNum);
     }
 
-    const items = isoDates.map((iso) => {
-      const d = new Date(iso);
+    const items = isoDates.map((depIso) => {
+      const d = new Date(depIso);
       const m = String(d.getMonth() + 1).padStart(2, "0");
       const da = String(d.getDate()).padStart(2, "0");
       const mmdd = `${m}/${da}`;
-      const p = map.get(mmdd);
+      const p = priceByDepIso.get(depIso);
       return (p !== undefined) ? { date: mmdd, price: p } : null;
     }).filter(Boolean);
 

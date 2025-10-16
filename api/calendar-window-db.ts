@@ -58,23 +58,29 @@ export default async function handler(req: Request): Promise<Response> {
       }
     }
 
-    const map = new Map<string, number>();
+    const priceByDepIso = new Map<string, number>();
     for (const r of results) {
-      const d = new Date(r.departure_date as any);
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      const key = `${mm}/${dd}`;
-      if (map.has(key)) continue; // 최신 수집 우선
+      const depIso = String(r.departure_date);
+      const expectedRet = (() => {
+        const d = new Date(depIso);
+        d.setDate(d.getDate() + Math.max(1, Number(tripDays)) - 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const da = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${da}`;
+      })();
+      if (String(r.return_date) !== expectedRet) continue;
+      if (priceByDepIso.has(depIso)) continue;
       const val = (r as any).min_price !== null && (r as any).min_price !== undefined ? Number((r as any).min_price) : NaN;
-      if (!Number.isNaN(val)) map.set(key, val);
+      if (!Number.isNaN(val)) priceByDepIso.set(depIso, val);
     }
 
-    const items = depDates.map((iso) => {
-      const d = new Date(iso);
+    const items = depDates.map((depIso) => {
+      const d = new Date(depIso);
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
       const key = `${mm}/${dd}`;
-      const price = map.get(key);
+      const price = priceByDepIso.get(depIso);
       return price !== undefined ? { date: key, price } : null;
     }).filter(Boolean);
 
