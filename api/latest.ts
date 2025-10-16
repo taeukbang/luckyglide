@@ -44,10 +44,24 @@ export default async function handler(req: Request): Promise<Response> {
       .eq("from", from)
       .in("to", codes);
     if (errExt) throw errExt;
+    // 최신 수집시점(해당 목적지의 latest rows 중 최상단)
+    const { data: recentRows, error: errRecent } = await supabase
+      .from("fares")
+      .select("to,collected_at")
+      .eq("from", from)
+      .in("to", codes)
+      .eq("is_latest", true)
+      .order("collected_at", { ascending: false });
+    if (errRecent) throw errRecent;
 
     const byTo = new Map<string, any>((extrema ?? []).map((r: any) => [r.to, r]));
+    const latestCollectedByTo = new Map<string, string>();
+    for (const row of (recentRows ?? [])) {
+      if (!latestCollectedByTo.has(row.to)) latestCollectedByTo.set(row.to, row.collected_at as any);
+    }
     const items: Item[] = targets.map((t) => {
       const r = byTo.get(t.code);
+      const lastCollected = latestCollectedByTo.get(t.code) ?? r?.collected_at ?? null;
       return {
         code: t.code,
         city: t.nameKo,
@@ -58,7 +72,7 @@ export default async function handler(req: Request): Promise<Response> {
         departureDate: r?.departure_date ?? null,
         returnDate: r?.return_date ?? null,
         airline: r?.min_airline ?? null,
-        collectedAt: r?.collected_at ?? null,
+        collectedAt: lastCollected,
       } as Item;
     });
 
