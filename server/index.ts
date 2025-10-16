@@ -51,15 +51,16 @@ app.post("/api/scan", async (req, res) => {
     now.setDate(now.getDate() + 1); // 내일
     const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+    // 단일 목적지만 빠르게 스캔 (기본 14일 윈도우)
     const result = await scanAndStore({
       from: fromQ,
       to: toQ,
       startDate,
-      days: 30,
+      days: 14,
       minTripDays: 3,
       maxTripDays: 7,
     });
-    res.json(result);
+    res.json({ ok: true, ...result });
   } catch (e: any) {
     res.status(500).json({ error: e?.message ?? "internal error" });
   }
@@ -107,11 +108,18 @@ app.get("/api/latest", async (req, res) => {
   try {
     const from = String(req.query.from ?? "ICN");
     const region = req.query.region ? String(req.query.region) : null;
+    const codesParam = req.query.codes ? String(req.query.codes) : "";
 
     // 대상 도시: 지역이 지정되면 해당 지역만, "모두" 또는 미지정이면 전체
     let targets = DESTINATIONS;
     if (region && region !== "모두") {
       targets = targets.filter((d) => d.region === region);
+    }
+    if (codesParam) {
+      const set = new Set(codesParam.split(",").map((s) => s.trim()).filter(Boolean));
+      if (set.size > 0) {
+        targets = targets.filter((d) => set.has(d.code));
+      }
     }
     const codes = targets.map((d) => d.code);
 

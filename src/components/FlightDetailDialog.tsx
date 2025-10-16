@@ -32,6 +32,7 @@ interface FlightDetailDialogProps {
   }[];
   tripDays?: number;
   onTripDaysChange?: (n: number) => void;
+  collectedAt?: string | null;
 }
 
 export const FlightDetailDialog = ({
@@ -44,6 +45,7 @@ export const FlightDetailDialog = ({
   priceData,
   tripDays = 3,
   onTripDaysChange,
+  collectedAt,
 }: FlightDetailDialogProps) => {
   const [tripDuration, setTripDuration] = useState(String(tripDays));
   // 부모 tripDays가 바뀌면 내부 선택값도 동기화 (카드의 여행일수 반영)
@@ -92,6 +94,20 @@ export const FlightDetailDialog = ({
               <p className="text-xl font-bold text-destructive">₩{maxPrice.toLocaleString()}</p>
             </div>
           </div>
+
+          {collectedAt ? (
+            <div className="text-xs text-muted-foreground">가격 수집 시점: {(() => {
+              try {
+                const d = new Date(collectedAt);
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const da = String(d.getDate()).padStart(2, '0');
+                const hh = String(d.getHours()).padStart(2, '0');
+                const mm = String(d.getMinutes()).padStart(2, '0');
+                return `${y}-${m}-${da} ${hh}:${mm}`;
+              } catch { return collectedAt; }
+            })()}</div>
+          ) : null}
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">

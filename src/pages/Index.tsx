@@ -86,65 +86,28 @@ const Index = () => {
         setLoading(true);
         setError(null);
 
-        // A) 대상 도시 목록 로드
-        const resDest = await fetch(`/api/destinations`, { signal: controller.signal });
-        if (!resDest.ok) throw new Error(`HTTP ${resDest.status}`);
-        const dataDest = await resDest.json();
-        let targets: { code: string; nameKo: string; region: string }[] = dataDest.destinations || [];
-
-        // 대륙 필터 적용
-        if (selectedContinent && selectedContinent !== "모두") {
-          targets = targets.filter((d) => d.region === selectedContinent);
-        }
-
-        // B) 플레이스홀더 먼저 렌더링
-        const baseItems: LatestItem[] = targets.map((t) => ({
-          code: t.code,
-          city: t.nameKo,
-          region: t.region,
+        // DB 캐시 기반 빠른 로딩: /api/latest (region 필터 지원)
+        const qs = new URLSearchParams();
+        qs.set('from', 'ICN');
+        if (selectedContinent && selectedContinent !== '모두') qs.set('region', selectedContinent);
+        const res = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const list = (data.items || []).map((r: any) => ({
+          code: r.code,
+          city: r.city,
+          region: r.region ?? null,
           country: null as any,
           countryCode: null as any,
-          price: null as any,
-          originalPrice: null,
-          departureDate: null as any,
-          returnDate: null as any,
-          airline: null as any,
-          collectedAt: "",
-          tripDays: null,
-        }));
-        setItems(baseItems);
-
-        // C) 작은 동시성 풀(3)로 코드별 로딩, 응답 즉시 해당 카드만 갱신
-        const codes = targets.map((t) => t.code);
-
-        const fetchOne = async (code: string) => {
-          const url = `/api/latest-live?from=ICN&codes=${encodeURIComponent(code)}&days=14&minTripDays=3&maxTripDays=7`;
-          const ctrl = new AbortController();
-          const id = setTimeout(() => ctrl.abort(), 12000);
-          try {
-            const res = await fetch(url, { signal: ctrl.signal });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            const item: LatestItem | undefined = (data.items || [])[0];
-            if (!item) return;
-            setItems((prev) => prev.map((it) => it.code === item.code ? ({ ...it, ...item }) as LatestItem : it));
-          } catch (e) {
-            // 실패 시 다음 작업으로 진행
-          } finally {
-            clearTimeout(id);
-          }
-        };
-
-        const POOL = 3;
-        let idx = 0;
-        await Promise.all(
-          Array.from({ length: Math.min(POOL, codes.length) }).map(async () => {
-            while (idx < codes.length) {
-              const my = idx++;
-              await fetchOne(codes[my]);
-            }
-          })
-        );
+          price: (r.price !== null && r.price !== undefined) ? Number(r.price) : null as any,
+          originalPrice: (r.originalPrice !== null && r.originalPrice !== undefined) ? Number(r.originalPrice) : null,
+          departureDate: r.departureDate ?? null as any,
+          returnDate: r.returnDate ?? null as any,
+          airline: r.airline ?? null as any,
+          collectedAt: r.collectedAt ?? '',
+          tripDays: (r.tripDays !== null && r.tripDays !== undefined) ? Number(r.tripDays) : null,
+        })) as LatestItem[];
+        setItems(list);
       } catch (e: any) {
         if (e.name !== "AbortError") setError(e.message ?? "load error");
       } finally {
@@ -198,6 +161,7 @@ const Index = () => {
           meta: { code: it.code, tripDays: it.tripDays ?? undefined },
           priceHistory: [] as any,
           continent: it.region ?? "",
+        collectedAt: it.collectedAt,
         });
       });
   }, [items, selectedContinent, sortKey]);
@@ -228,6 +192,40 @@ const Index = () => {
     loadHistory(dialogTripDays);
     return () => controller.abort();
   }, [dialogOpen, selectedFlight?.code, dialogTripDays]);
+
+  const [refreshingCode, setRefreshingCode] = useState<string | null>(null);
+  const handleRefresh = async (code: string) => {
+    try {
+      setRefreshingCode(code);
+      // 서버에 해당 목적지만 스캔 요청 → DB 최신값 갱신
+      const res = await fetch(`/api/scan?from=${encodeURIComponent('ICN')}&to=${encodeURIComponent(code)}`, { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // 스캔 완료 후 최신값 재조회 (단일 코드)
+      const qs = new URLSearchParams();
+      qs.set('from', 'ICN');
+      qs.set('codes', code);
+      const latestRes = await fetch(`/api/latest?${qs.toString()}`);
+      if (latestRes.ok) {
+        const data = await latestRes.json();
+        const item: any = (data.items || [])[0];
+        if (item) {
+          setItems((prev) => prev.map((p) => p.code === code ? ({
+            ...p,
+            price: (item.price !== null && item.price !== undefined) ? Number(item.price) : (null as any),
+            originalPrice: (item.originalPrice !== null && item.originalPrice !== undefined) ? Number(item.originalPrice) : null,
+            departureDate: item.departureDate ?? null as any,
+            returnDate: item.returnDate ?? null as any,
+            airline: item.airline ?? null as any,
+            collectedAt: item.collectedAt ?? '',
+            tripDays: (item.tripDays !== null && item.tripDays !== undefined) ? Number(item.tripDays) : null,
+          }) : p));
+        }
+      }
+    } catch (e) {
+    } finally {
+      setRefreshingCode(null);
+    }
+  };
 
   if (!isAuthenticated) {
     return (
@@ -315,9 +313,12 @@ const Index = () => {
               originalPrice={flight.originalPrice}
               discount={flight.discount}
               travelDates={flight.travelDates}
+              collectedAt={(flight as any).collectedAt}
               meta={{ code: flight.code, tripDays: (flight as any).meta?.tripDays }}
               onClick={() => handleFlightClick(flight)}
               onShowChart={() => handleFlightClick(flight)}
+              onRefresh={() => handleRefresh(flight.code)}
+              refreshLoading={refreshingCode === flight.code}
             />
           ))}
         </div>
@@ -342,6 +343,7 @@ const Index = () => {
           priceData={selectedFlight.priceHistory}
           tripDays={dialogTripDays}
           onTripDaysChange={(n)=> setDialogTripDays(n)}
+          collectedAt={(selectedFlight as any).collectedAt}
         />
       )}
     </div>
