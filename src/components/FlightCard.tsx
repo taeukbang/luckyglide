@@ -126,6 +126,7 @@ export const FlightCard = ({
 
         <div className="flex items-center justify-end gap-2">
           <Button size="sm" variant="ghost" className="text-xs h-7 px-2" onClick={(e)=>{ e.stopPropagation(); setOpenSpark(v=>!v); }}>
+            {!openSpark && <span className="mr-1">↓</span>}
             {openSpark ? '그래프 닫기' : '그래프 보기'}
           </Button>
           {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
