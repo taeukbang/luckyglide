@@ -128,32 +128,40 @@ export const FlightCard = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2">
-          <Button size="sm" variant="ghost" className="text-xs h-7 px-2" onClick={(e)=>{ e.stopPropagation(); setOpenSpark(v=>!v); }}>
-            {!openSpark && <span className="mr-1">⬇️</span>}
-            {openSpark ? '그래프 닫기' : '그래프 보기'}
-          </Button>
-          {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
-          <Button size="sm" className="text-xs h-7 px-3 hidden" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
-            {refreshLoading ? '새로고침 중…' : '새로고침'}
-          </Button>
-          <a
-            href={(() => {
-              const [depIso, retIsoRaw] = travelDates.split("~");
-              // 링크는 카드에 표시된 스캔값(출발/복귀일)을 그대로 사용
-              const retIso = retIsoRaw?.trim() || depIso;
-              return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso });
-            })()}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Button size="sm" className="text-xs h-7 px-3">
-              예약
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs h-7 px-2 bg-blue-100 text-blue-700 hover:bg-blue-200"
+              onClick={(e)=>{ e.stopPropagation(); setOpenSpark(v=>!v); }}
+            >
+              {openSpark ? '그래프 닫기' : '⬇️ 그래프 보기'}
             </Button>
-          </a>
-          <Button size="sm" className="text-xs h-7 px-3 bg-green-600 hover:bg-green-700" variant="default" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
-            가격 변동 확인
-          </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
+            <Button size="sm" className="text-xs h-7 px-3 hidden" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
+              {refreshLoading ? '새로고침 중…' : '새로고침'}
+            </Button>
+            <a
+              href={(() => {
+                const [depIso, retIsoRaw] = travelDates.split("~");
+                // 링크는 카드에 표시된 스캔값(출발/복귀일)을 그대로 사용
+                const retIso = retIsoRaw?.trim() || depIso;
+                return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso });
+              })()}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Button size="sm" className="text-xs h-7 px-3">
+                예약
+              </Button>
+            </a>
+            <Button size="sm" className="text-xs h-7 px-3 bg-blue-100 text-blue-700 hover:bg-blue-200" variant="default" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
+              가격 변동 확인
+            </Button>
+          </div>
         </div>
         {openSpark && (
           <div className="pt-2">
