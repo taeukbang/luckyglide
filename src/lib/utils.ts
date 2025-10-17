@@ -57,3 +57,14 @@ export function buildMrtBookingUrl(
   // Safety: ensure KSESID param exists even if URLSearchParams handling changes
   return built.includes("KSESID=") ? built : `${built}&KSESID=${encodeURIComponent(MRT_KSESID)}`;
 }
+
+// Timezone-safe ISO date add (treat input as UTC calendar date)
+export function addDaysIsoUTC(iso: string, days: number) {
+  const [yy, mm, dd] = iso.split("-").map((s) => Number(s));
+  const dt = new Date(Date.UTC(yy, (mm || 1) - 1, dd || 1));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  const y = dt.getUTCFullYear();
+  const m = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(dt.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}

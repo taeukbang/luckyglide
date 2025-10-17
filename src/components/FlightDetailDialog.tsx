@@ -16,7 +16,7 @@ import {
 import { PriceChart } from "./PriceChart";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
-import { buildMrtBookingUrl } from "@/lib/utils";
+import { buildMrtBookingUrl, addDaysIsoUTC } from "@/lib/utils";
 import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@/lib/flags";
 
 interface FlightDetailDialogProps {
@@ -178,25 +178,17 @@ export const FlightDetailDialog = ({
                   return acc;
                 }, {});
                 if (!best.date || !code) return "#";
-                // 2) MM/DD -> YYYY-MM-DD 변환
+                // 2) MM/DD -> ISO (현재 연도) — TZ 안전 처리
                 const now = new Date();
-                const yyyy = now.getFullYear();
+                const yyyy = now.getUTCFullYear();
                 const toIso = (mmdd: string) => {
                   const [mm, dd] = mmdd.split("/");
                   return `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
                 };
                 const depIso = toIso(best.date);
-                // 3) 복귀일 = 출발일 + (tripDays-1) 그대로 사용 (스캔 표기와 일치)
-                const addDays = (iso: string, days: number) => {
-                  const d = new Date(iso);
-                  d.setDate(d.getDate() + days);
-                  const y = d.getFullYear();
-                  const m = String(d.getMonth() + 1).padStart(2, "0");
-                  const da = String(d.getDate()).padStart(2, "0");
-                  return `${y}-${m}-${da}`;
-                };
+                // 3) 복귀일 = 출발일 + (tripDays-1) — UTC 기준 덧셈으로 변환 오프셋 방지
                 const days = parseInt(tripDuration, 10) || 3;
-                const retIso = addDays(depIso, days - 1);
+                const retIso = addDaysIsoUTC(depIso, days - 1);
                 return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso });
               })()}
               
