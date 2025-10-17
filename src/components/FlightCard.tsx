@@ -2,6 +2,8 @@ import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { buildMrtBookingUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Sparkline } from "./Sparkline";
+import { useEffect, useState } from "react";
 
 interface FlightCardProps {
   city: string;
@@ -39,6 +41,28 @@ export const FlightCard = ({
   refreshLoading,
   justRefreshed,
 }: FlightCardProps) => {
+  const [openSpark, setOpenSpark] = useState(false);
+  const [sparkData, setSparkData] = useState<{ date: string; price: number }[]>([]);
+  const [sparkLoading, setSparkLoading] = useState(false);
+  useEffect(() => {
+    if (!openSpark || !meta?.code) return;
+    const ctrl = new AbortController();
+    (async () => {
+      try {
+        setSparkLoading(true);
+        setSparkData([]);
+        const res = await fetch('/api/calendar-window-db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'ICN', to: meta.code, tripDays: meta?.tripDays || 3, days: 180 }), signal: ctrl.signal });
+        const data = await res.json();
+        const arr = (data.items || []).map((d: any) => ({ date: d.date, price: Number(d.price) }));
+        const n = 60;
+        const step = Math.max(1, Math.ceil(arr.length / n));
+        const sampled = arr.filter((_, i) => i % step === 0);
+        setSparkData(sampled);
+      } catch {}
+      finally { setSparkLoading(false); }
+    })();
+    return () => ctrl.abort();
+  }, [openSpark, meta?.code, meta?.tripDays]);
   const formatCollected = (iso?: string | null) => {
     if (!iso) return null;
     try {
@@ -104,28 +128,52 @@ export const FlightCard = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2">
-          {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
-          <Button size="sm" className="text-xs h-7 px-3 hidden" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
-            {refreshLoading ? '새로고침 중…' : '새로고침'}
-          </Button>
-          <a
-            href={(() => {
-              const [depIso, retIsoRaw] = travelDates.split("~");
-              // 링크는 카드에 표시된 스캔값(출발/복귀일)을 그대로 사용
-              const retIso = retIsoRaw?.trim() || depIso;
-              return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso });
-            })()}
-            
-          >
-            <Button size="sm" className="text-xs h-7 px-3">
-              예약
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs h-7 px-2 bg-blue-100 text-blue-700 hover:bg-blue-200"
+              onClick={(e)=>{ e.stopPropagation(); setOpenSpark(v=>!v); }}
+            >
+              {openSpark ? '그래프 닫기' : '⬇️ 그래프 보기'}
             </Button>
-          </a>
-          <Button size="sm" className="text-xs h-7 px-3 bg-green-600 hover:bg-green-700" variant="default" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
-            가격 변동 확인
-          </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
+            <Button size="sm" className="text-xs h-7 px-3 hidden" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
+              {refreshLoading ? '새로고침 중…' : '새로고침'}
+            </Button>
+            <a
+              href={(() => {
+                const [depIso, retIsoRaw] = travelDates.split("~");
+                // 링크는 카드에 표시된 스캔값(출발/복귀일)을 그대로 사용
+                const retIso = retIsoRaw?.trim() || depIso;
+                return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso });
+              })()}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Button size="sm" className="text-xs h-7 px-3">
+                예약
+              </Button>
+            </a>
+            <Button size="sm" className="text-xs h-7 px-3 bg-green-100 text-green-700 hover:bg-green-200" variant="default" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
+              가격 변동 확인
+            </Button>
+          </div>
         </div>
+        {openSpark && (
+          <div className="pt-2">
+            <div className="bg-muted rounded-md h-14 flex items-center justify-center overflow-hidden">
+              {sparkLoading ? (
+                <span className="text-xs text-muted-foreground">로딩 중…</span>
+              ) : (
+                <Sparkline data={sparkData} width="100%" height={56} />
+              )}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
