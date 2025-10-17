@@ -68,3 +68,18 @@ export function addDaysIsoUTC(iso: string, days: number) {
   const d = String(dt.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
+
+// KST(UTC+9) 기준으로 YYYY-MM-DD에 days를 더한 값을 반환
+export function addDaysIsoKST(iso: string, days: number) {
+  const [yy, mm, dd] = iso.split("-").map(Number);
+  const KST_OFFSET = 9 * 60 * 60 * 1000; // UTC+9
+  // KST 자정 기준 타임스탬프 → UTC 연산 → KST로 복귀
+  const startUTC = Date.UTC(yy, (mm || 1) - 1, dd || 1) - KST_OFFSET;
+  const endUTC = startUTC + days * 24 * 60 * 60 * 1000;
+  const endKST = endUTC + KST_OFFSET;
+  const d = new Date(endKST);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const da = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${da}`;
+}

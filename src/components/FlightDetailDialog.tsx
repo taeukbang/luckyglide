@@ -16,7 +16,7 @@ import {
 import { PriceChart } from "./PriceChart";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
-import { buildMrtBookingUrl, addDaysIsoUTC } from "@/lib/utils";
+import { buildMrtBookingUrl, addDaysIsoKST } from "@/lib/utils";
 import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@/lib/flags";
 
 interface FlightDetailDialogProps {
@@ -188,7 +188,7 @@ export const FlightDetailDialog = ({
                 const depIso = toIso(best.date);
                 // 3) 복귀일 = 출발일 + (tripDays-1) — UTC 기준 덧셈으로 변환 오프셋 방지
                 const days = parseInt(tripDuration, 10) || 3;
-                const retIso = addDaysIsoUTC(depIso, days - 1);
+                const retIso = addDaysIsoKST(depIso, days - 1);
                 return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso });
               })()}
               
