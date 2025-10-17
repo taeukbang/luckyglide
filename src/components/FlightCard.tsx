@@ -116,8 +116,7 @@ export const FlightCard = ({
               const retIso = retIsoRaw?.trim() || depIso;
               return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso });
             })()}
-            target="_blank"
-            rel="noreferrer"
+            
           >
             <Button size="sm" className="text-xs h-7 px-3">
               예약
