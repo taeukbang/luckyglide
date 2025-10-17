@@ -2,10 +2,13 @@ import React from "react";
 
 type Point = { date: string; price: number };
 
-export function Sparkline({ data, width = 280, height = 56, stroke = "hsl(var(--primary))", minColor = "hsl(var(--destructive))", bg = "hsl(var(--muted))" }: { data: Point[]; width?: number; height?: number; stroke?: string; minColor?: string; bg?: string }) {
+export function Sparkline({ data, width = "100%", height = 56, stroke = "hsl(var(--primary))", minColor = "hsl(var(--destructive))", bg = "hsl(var(--muted))" }: { data: Point[]; width?: number | string; height?: number; stroke?: string; minColor?: string; bg?: string }) {
   const pad = 4;
-  const w = width - pad * 2;
-  const h = height - pad * 2;
+  // 내부 좌표 계산용 가상 너비 (viewBox 기준)
+  const vbw = 600;
+  const vbh = typeof height === 'number' ? height : 56;
+  const w = vbw - pad * 2;
+  const h = vbh - pad * 2;
   if (!data || data.length < 2) return <svg width={width} height={height} />;
   const xs = data.map((_, i) => i);
   const ys = data.map(p => p.price);
@@ -17,8 +20,8 @@ export function Sparkline({ data, width = 280, height = 56, stroke = "hsl(var(--
   const minIdx = ys.indexOf(minY);
   const minPoint = { x: scaleX(minIdx), y: scaleY(minY) };
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-      <rect x={0} y={0} width={width} height={height} fill={bg} rx={6} />
+    <svg width={width} height={height} viewBox={`0 0 ${vbw} ${vbh}`}>
+      <rect x={0} y={0} width={vbw} height={vbh} fill={bg} rx={6} />
       <path d={d} fill="none" stroke={stroke} strokeWidth={2} strokeLinecap="round" />
       {/* 최저가 포인트 표시 */}
       <circle cx={minPoint.x} cy={minPoint.y} r={3.5} fill={minColor} />

@@ -152,7 +152,7 @@ export const FlightCard = ({
         </div>
         {openSpark && (
           <div className="pt-2">
-            <Sparkline data={sparkData} />
+            <Sparkline data={sparkData} width="100%" height={64} />
           </div>
         )}
       </CardContent>
