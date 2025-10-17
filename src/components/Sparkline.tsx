@@ -2,7 +2,7 @@ import React from "react";
 
 type Point = { date: string; price: number };
 
-export function Sparkline({ data, width = 280, height = 56, stroke = "hsl(var(--primary))", minColor = "hsl(var(--destructive))" }: { data: Point[]; width?: number; height?: number; stroke?: string; minColor?: string }) {
+export function Sparkline({ data, width = 280, height = 56, stroke = "hsl(var(--primary))", minColor = "hsl(var(--destructive))", bg = "hsl(var(--muted))" }: { data: Point[]; width?: number; height?: number; stroke?: string; minColor?: string; bg?: string }) {
   const pad = 4;
   const w = width - pad * 2;
   const h = height - pad * 2;
@@ -18,6 +18,7 @@ export function Sparkline({ data, width = 280, height = 56, stroke = "hsl(var(--
   const minPoint = { x: scaleX(minIdx), y: scaleY(minY) };
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+      <rect x={0} y={0} width={width} height={height} fill={bg} rx={6} />
       <path d={d} fill="none" stroke={stroke} strokeWidth={2} strokeLinecap="round" />
       {/* 최저가 포인트 표시 */}
       <circle cx={minPoint.x} cy={minPoint.y} r={3.5} fill={minColor} />

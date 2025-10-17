@@ -48,10 +48,10 @@ export const FlightCard = ({
     const ctrl = new AbortController();
     (async () => {
       try {
-        const res = await fetch('/api/calendar-window-db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'ICN', to: meta.code, tripDays: meta?.tripDays || 3, days: 14 }), signal: ctrl.signal });
+        const res = await fetch('/api/calendar-window-db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'ICN', to: meta.code, tripDays: meta?.tripDays || 3, days: 180 }), signal: ctrl.signal });
         const data = await res.json();
         const arr = (data.items || []).map((d: any) => ({ date: d.date, price: Number(d.price) }));
-        const n = 20;
+        const n = 60;
         const step = Math.max(1, Math.ceil(arr.length / n));
         const sampled = arr.filter((_, i) => i % step === 0);
         setSparkData(sampled);
