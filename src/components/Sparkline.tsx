@@ -3,7 +3,7 @@ import React from "react";
 type Point = { date: string; price: number };
 
 export function Sparkline({ data, width = "100%", height = 56, stroke = "hsl(var(--primary))", minColor = "hsl(var(--destructive))", bg = "hsl(var(--muted))", showEdgeLabels = true, labelColor = "hsl(var(--muted-foreground))" }: { data: Point[]; width?: number | string; height?: number; stroke?: string; minColor?: string; bg?: string; showEdgeLabels?: boolean; labelColor?: string }) {
-  const pad = 2;
+  const pad = 1;
   // 내부 좌표 계산용 가상 너비 (viewBox 기준)
   const vbw = 600;
   const vbh = typeof height === 'number' ? height : 56;
@@ -42,10 +42,10 @@ export function Sparkline({ data, width = "100%", height = 56, stroke = "hsl(var
       <circle cx={minPoint.x} cy={minPoint.y} r={3.5} fill={minColor} />
       {showEdgeLabels && (
         <>
-          <text x={pad + 2} y={vbh - 4} fontSize={12} fill={labelColor} textAnchor="start">
+          <text x={pad + 2} y={vbh - 2} fontSize={14} fill={labelColor} textAnchor="start">
             {ymd[0]}
           </text>
-          <text x={vbw - pad - 2} y={vbh - 4} fontSize={12} fill={labelColor} textAnchor="end">
+          <text x={vbw - pad - 2} y={vbh - 2} fontSize={14} fill={labelColor} textAnchor="end">
             {ymd[ymd.length - 1]}
           </text>
         </>
