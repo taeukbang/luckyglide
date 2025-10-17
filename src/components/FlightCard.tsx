@@ -165,11 +165,13 @@ export const FlightCard = ({
         </div>
         {openSpark && (
           <div className="pt-2">
-            {sparkLoading ? (
-              <div className="text-xs text-muted-foreground py-3 text-center bg-muted rounded-md">로딩 중…</div>
-            ) : (
-              <Sparkline data={sparkData} width="100%" height={84} />
-            )}
+            <div className="bg-muted rounded-md h-14 flex items-center justify-center overflow-hidden">
+              {sparkLoading ? (
+                <span className="text-xs text-muted-foreground">로딩 중…</span>
+              ) : (
+                <Sparkline data={sparkData} width="100%" height={56} />
+              )}
+            </div>
           </div>
         )}
       </CardContent>
