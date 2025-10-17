@@ -191,7 +191,8 @@ export const FlightDetailDialog = ({
                 const retIso = addDaysIsoKST(depIso, days - 1);
                 return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso });
               })()}
-              
+              target="_blank"
+              rel="noreferrer"
             >
               <Button className="w-full" size="lg">최저가 예약하기</Button>
             </a>

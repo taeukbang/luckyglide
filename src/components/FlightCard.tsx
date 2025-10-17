@@ -2,6 +2,8 @@ import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { buildMrtBookingUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Sparkline } from "./Sparkline";
+import { useEffect, useState } from "react";
 
 interface FlightCardProps {
   city: string;
@@ -39,6 +41,24 @@ export const FlightCard = ({
   refreshLoading,
   justRefreshed,
 }: FlightCardProps) => {
+  const [openSpark, setOpenSpark] = useState(false);
+  const [sparkData, setSparkData] = useState<{ date: string; price: number }[]>([]);
+  useEffect(() => {
+    if (!openSpark || !meta?.code) return;
+    const ctrl = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch('/api/calendar-window-db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'ICN', to: meta.code, tripDays: meta?.tripDays || 3, days: 14 }), signal: ctrl.signal });
+        const data = await res.json();
+        const arr = (data.items || []).map((d: any) => ({ date: d.date, price: Number(d.price) }));
+        const n = 20;
+        const step = Math.max(1, Math.ceil(arr.length / n));
+        const sampled = arr.filter((_, i) => i % step === 0);
+        setSparkData(sampled);
+      } catch {}
+    })();
+    return () => ctrl.abort();
+  }, [openSpark, meta?.code, meta?.tripDays]);
   const formatCollected = (iso?: string | null) => {
     if (!iso) return null;
     try {
@@ -105,6 +125,9 @@ export const FlightCard = ({
         </div>
 
         <div className="flex items-center justify-end gap-2">
+          <Button size="sm" variant="ghost" className="text-xs h-7 px-2" onClick={(e)=>{ e.stopPropagation(); setOpenSpark(v=>!v); }}>
+            {openSpark ? '그래프 닫기' : '그래프 보기'}
+          </Button>
           {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
           <Button size="sm" className="text-xs h-7 px-3 hidden" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
             {refreshLoading ? '새로고침 중…' : '새로고침'}
@@ -116,7 +139,8 @@ export const FlightCard = ({
               const retIso = retIsoRaw?.trim() || depIso;
               return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso });
             })()}
-            
+            target="_blank"
+            rel="noreferrer"
           >
             <Button size="sm" className="text-xs h-7 px-3">
               예약
@@ -126,6 +150,11 @@ export const FlightCard = ({
             가격 변동 확인
           </Button>
         </div>
+        {openSpark && (
+          <div className="pt-2">
+            <Sparkline data={sparkData} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

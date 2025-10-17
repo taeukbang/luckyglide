@@ -69,6 +69,7 @@ const Index = () => {
   const sortOptions = [
     { key: "priceAsc", label: "가격 낮은 순" },
     { key: "discountDesc", label: "최고가 대비 할인율 높은 순" },
+    { key: "earliestDep", label: "출발일 빠른 순" },
   ];
   const [sortKey, setSortKey] = useState<string>(sortOptions[0].key);
   
@@ -135,6 +136,11 @@ const Index = () => {
         const bDiscount = (typeof b.price === 'number' && typeof b.originalPrice === 'number' && b.originalPrice > 0)
           ? Math.abs(100 - Math.round((Number(b.price) / Number(b.originalPrice)) * 100)) : -Infinity;
         return (bDiscount - aDiscount);
+      }
+      if (sortKey === "earliestDep") {
+        const ad = a.departureDate ? Date.parse(a.departureDate) : Infinity;
+        const bd = b.departureDate ? Date.parse(b.departureDate) : Infinity;
+        return ad - bd;
       }
       // 기본: 가격 오름차순
       return (a.price ?? Infinity) - (b.price ?? Infinity);
