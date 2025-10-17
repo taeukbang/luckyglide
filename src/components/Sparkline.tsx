@@ -19,6 +19,21 @@ export function Sparkline({ data, width = "100%", height = 56, stroke = "hsl(var
   const d = data.map((p, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(i)} ${scaleY(p.price)}`).join(" ");
   const minIdx = ys.indexOf(minY);
   const minPoint = { x: scaleX(minIdx), y: scaleY(minY) };
+  // YYYY/MM/DD 라벨 생성: MM/DD 시퀀스가 연말을 넘을 때 해를 +1
+  const baseYear = new Date().getFullYear();
+  let yr = baseYear;
+  let prevMonth: number | null = null;
+  const ymd = data.map((p) => {
+    const [mmStr, ddStr] = String(p.date).split("/");
+    const mm = Number(mmStr || 1);
+    const dd = Number(ddStr || 1);
+    if (prevMonth !== null && mm < prevMonth) yr += 1;
+    prevMonth = mm;
+    const YYYY = yr;
+    const MM = String(mm).padStart(2, "0");
+    const DD = String(dd).padStart(2, "0");
+    return `${YYYY}/${MM}/${DD}`;
+  });
   return (
     <svg width={width} height={height} viewBox={`0 0 ${vbw} ${vbh}`}>
       <rect x={0} y={0} width={vbw} height={vbh} fill={bg} rx={6} />
@@ -28,10 +43,10 @@ export function Sparkline({ data, width = "100%", height = 56, stroke = "hsl(var
       {showEdgeLabels && (
         <>
           <text x={pad + 2} y={vbh - 6} fontSize={10} fill={labelColor} textAnchor="start">
-            {data[0]?.date}
+            {ymd[0]}
           </text>
           <text x={vbw - pad - 2} y={vbh - 6} fontSize={10} fill={labelColor} textAnchor="end">
-            {data[data.length - 1]?.date}
+            {ymd[ymd.length - 1]}
           </text>
         </>
       )}

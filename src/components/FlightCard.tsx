@@ -43,11 +43,14 @@ export const FlightCard = ({
 }: FlightCardProps) => {
   const [openSpark, setOpenSpark] = useState(false);
   const [sparkData, setSparkData] = useState<{ date: string; price: number }[]>([]);
+  const [sparkLoading, setSparkLoading] = useState(false);
   useEffect(() => {
     if (!openSpark || !meta?.code) return;
     const ctrl = new AbortController();
     (async () => {
       try {
+        setSparkLoading(true);
+        setSparkData([]);
         const res = await fetch('/api/calendar-window-db', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'ICN', to: meta.code, tripDays: meta?.tripDays || 3, days: 180 }), signal: ctrl.signal });
         const data = await res.json();
         const arr = (data.items || []).map((d: any) => ({ date: d.date, price: Number(d.price) }));
@@ -56,6 +59,7 @@ export const FlightCard = ({
         const sampled = arr.filter((_, i) => i % step === 0);
         setSparkData(sampled);
       } catch {}
+      finally { setSparkLoading(false); }
     })();
     return () => ctrl.abort();
   }, [openSpark, meta?.code, meta?.tripDays]);
@@ -126,7 +130,7 @@ export const FlightCard = ({
 
         <div className="flex items-center justify-end gap-2">
           <Button size="sm" variant="ghost" className="text-xs h-7 px-2" onClick={(e)=>{ e.stopPropagation(); setOpenSpark(v=>!v); }}>
-            {!openSpark && <span className="mr-1">↓</span>}
+            {!openSpark && <span className="mr-1">⬇️</span>}
             {openSpark ? '그래프 닫기' : '그래프 보기'}
           </Button>
           {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
@@ -153,7 +157,11 @@ export const FlightCard = ({
         </div>
         {openSpark && (
           <div className="pt-2">
-            <Sparkline data={sparkData} width="100%" height={64} />
+            {sparkLoading ? (
+              <div className="text-xs text-muted-foreground py-3 text-center bg-muted rounded-md">로딩 중…</div>
+            ) : (
+              <Sparkline data={sparkData} width="100%" height={64} />
+            )}
           </div>
         )}
       </CardContent>
