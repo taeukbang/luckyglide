@@ -158,7 +158,7 @@ export const FlightCard = ({
                 예약
               </Button>
             </a>
-            <Button size="sm" className="text-xs h-7 px-3 bg-blue-100 text-blue-700 hover:bg-blue-200" variant="default" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
+            <Button size="sm" className="text-xs h-7 px-3 bg-green-100 text-green-700 hover:bg-green-200" variant="default" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
               가격 변동 확인
             </Button>
           </div>
@@ -168,7 +168,7 @@ export const FlightCard = ({
             {sparkLoading ? (
               <div className="text-xs text-muted-foreground py-3 text-center bg-muted rounded-md">로딩 중…</div>
             ) : (
-              <Sparkline data={sparkData} width="100%" height={64} />
+              <Sparkline data={sparkData} width="100%" height={84} />
             )}
           </div>
         )}
