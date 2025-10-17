@@ -68,7 +68,7 @@ export const FlightDetailDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`max-w-3xl max-h-[90vh] overflow-y-auto ${justRefreshed ? 'lg-flash-outline' : ''}`}>
         <DialogHeader>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-start gap-3 mb-2 text-left">
             <div className="w-12 h-9 rounded border border-border overflow-hidden flex items-center justify-center bg-muted">
               {countryCode ? (
                 <img
@@ -87,26 +87,27 @@ export const FlightDetailDialog = ({
                 <span className="text-lg">{emojiFromCountryCode(countryCode)}</span>
               )}
             </div>
-            <div>
-              <DialogTitle className="text-2xl">{city}</DialogTitle>
-              <DialogDescription className="text-base">{country}</DialogDescription>
+            <div className="text-left">
+              <DialogTitle className="text-2xl text-left">{city}</DialogTitle>
+              <DialogDescription className="text-base text-left">{country}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
-          <div className="grid grid-cols-3 gap-4">
+          {/* 모바일: 1열 3행, sm 이상: 3열 */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-secondary rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-1">최저가</p>
-              <p className="text-xl font-bold text-success">₩{minPrice.toLocaleString()}</p>
+              <p className="text-2xl sm:text-xl font-bold text-success break-words">₩{minPrice.toLocaleString()}</p>
             </div>
             <div className="bg-secondary rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-1">평균가</p>
-              <p className="text-xl font-bold text-foreground">₩{avgPrice.toLocaleString()}</p>
+              <p className="text-2xl sm:text-xl font-bold text-foreground break-words">₩{avgPrice.toLocaleString()}</p>
             </div>
             <div className="bg-secondary rounded-lg p-4">
               <p className="text-sm text-muted-foreground mb-1">최고가</p>
-              <p className="text-xl font-bold text-destructive">₩{maxPrice.toLocaleString()}</p>
+              <p className="text-2xl sm:text-xl font-bold text-destructive break-words">₩{maxPrice.toLocaleString()}</p>
             </div>
           </div>
 
@@ -198,8 +199,7 @@ export const FlightDetailDialog = ({
                 const retIso = addDays(depIso, days - 1);
                 return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso });
               })()}
-              target="_blank"
-              rel="noreferrer"
+              
             >
               <Button className="w-full" size="lg">최저가 예약하기</Button>
             </a>
