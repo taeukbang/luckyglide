@@ -1,5 +1,5 @@
 export const config = { runtime: "edge" };
-import { DESTINATIONS_ALL } from "./_cities";
+import { DESTINATIONS_ALL } from "./_cities.js";
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") {
