@@ -70,7 +70,7 @@ app.post("/api/scan", async (req, res) => {
 
 app.post("/api/scan-all", async (req, res) => {
   try {
-    const { from = "ICN", regions, codes } = req.body || {} as { from?: string; regions?: string[]; codes?: string[] };
+    const { from = "ICN", regions, codes, transfer = -1 } = req.body || {} as { from?: string; regions?: string[]; codes?: string[]; transfer?: number };
     const now = new Date();
     now.setDate(now.getDate() + 1);
     const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -92,10 +92,11 @@ app.post("/api/scan-all", async (req, res) => {
         days: 30,
         minTripDays: 3,
         maxTripDays: 7,
+        transfer,
       });
       total += r.rows;
     }
-    res.json({ routes: targets.length, rows: total, regions: regions ?? null, codes: codes ?? null });
+    res.json({ routes: targets.length, rows: total, regions: regions ?? null, codes: codes ?? null, transfer });
   } catch (e: any) {
     res.status(500).json({ error: e?.message ?? "internal error" });
   }
