@@ -2,7 +2,31 @@ name: Scan fares (all + direct)
 on:
   schedule:
     - cron: "0 */6 * * *" # every 6 hours
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "IATA origin code"
+        default: "ICN"
+        required: false
+      codes:
+        description: "Comma-separated destination codes (e.g., FUK,NRT). Leave empty for all"
+        required: false
+      transfer:
+        description: "Transfer filter (-1 all, 0 direct)"
+        default: "0"
+        required: false
+      days:
+        description: "Scan window days"
+        default: "30"
+        required: false
+      minTripDays:
+        description: "Min trip days"
+        default: "3"
+        required: false
+      maxTripDays:
+        description: "Max trip days"
+        default: "7"
+        required: false
 jobs:
   all:
     runs-on: ubuntu-latest
@@ -44,5 +68,26 @@ jobs:
           SCAN_MAX_DAYS: 7
           SCAN_CONCURRENCY: 4
           SCAN_TRANSFER: 0
+
+  manual:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Scan manual (from inputs)
+        run: npx -y tsx scripts/scan-all.ts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SCAN_FROM: ${{ inputs.from }}
+          SCAN_DAYS: ${{ inputs.days }}
+          SCAN_MIN_DAYS: ${{ inputs.minTripDays }}
+          SCAN_MAX_DAYS: ${{ inputs.maxTripDays }}
+          SCAN_TRANSFER: ${{ inputs.transfer }}
+          SCAN_CODES: ${{ inputs.codes }}
 
 
