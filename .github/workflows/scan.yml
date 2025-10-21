@@ -13,7 +13,7 @@ jobs:
           node-version: 20
       - run: npm ci
       - name: Scan all (transfer=-1)
-        run: node scripts/scan-all.ts
+        run: npx -y tsx scripts/scan-all.ts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -34,7 +34,7 @@ jobs:
           node-version: 20
       - run: npm ci
       - name: Scan direct only (transfer=0)
-        run: node scripts/scan-all.ts
+        run: npx -y tsx scripts/scan-all.ts
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
