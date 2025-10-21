@@ -186,6 +186,7 @@ const Index = () => {
           const qs = new URLSearchParams();
           qs.set('from', 'ICN');
           qs.set('codes', selectedFlight.code);
+          qs.set('transfer', directOnly ? '0' : '-1');
           const latestRes = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
           if (latestRes.ok) {
             const data = await latestRes.json();
@@ -208,7 +209,7 @@ const Index = () => {
         const res = await fetch('/api/calendar-window-db', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 180 }),
+          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 180, transfer: directOnly ? 0 : -1 }),
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -231,13 +232,14 @@ const Index = () => {
   const handleRefresh = async (code: string) => {
     try {
       setRefreshingCodes(prev => new Set(prev).add(code));
-      // 서버에 해당 목적지만 스캔 요청 → DB 최신값 갱신
-      const res = await fetch(`/api/scan?from=${encodeURIComponent('ICN')}&to=${encodeURIComponent(code)}`, { method: 'POST' });
+      // 서버에 해당 목적지만 스캔 요청 → DB 최신값 갱신 (transfer 차원 반영)
+      const res = await fetch(`/api/scan?from=${encodeURIComponent('ICN')}&to=${encodeURIComponent(code)}&transfer=${encodeURIComponent(directOnly ? 0 : -1)}`, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       // 스캔 완료 후 최신값 재조회 (단일 코드)
       const qs = new URLSearchParams();
       qs.set('from', 'ICN');
       qs.set('codes', code);
+      qs.set('transfer', directOnly ? '0' : '-1');
       const latestRes = await fetch(`/api/latest?${qs.toString()}`);
       if (latestRes.ok) {
         const data = await latestRes.json();
