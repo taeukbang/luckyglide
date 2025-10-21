@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type LatestItem = {
   code: string;
@@ -72,6 +73,7 @@ const Index = () => {
     { key: "earliestDep", label: "출발일 빠른 순" },
   ];
   const [sortKey, setSortKey] = useState<string>(sortOptions[0].key);
+  const [directOnly, setDirectOnly] = useState<boolean>(false);
   
   useEffect(() => {
     const controller = new AbortController();
@@ -87,10 +89,11 @@ const Index = () => {
         setLoading(true);
         setError(null);
 
-        // DB 캐시 기반 빠른 로딩: /api/latest (region 필터 지원)
+        // DB 캐시 기반 빠른 로딩: /api/latest (region/transfer 필터 지원)
         const qs = new URLSearchParams();
         qs.set('from', 'ICN');
         if (selectedContinent && selectedContinent !== '모두') qs.set('region', selectedContinent);
+        qs.set('transfer', directOnly ? '0' : '-1');
         const res = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -118,7 +121,7 @@ const Index = () => {
 
     progressiveLoad();
     return () => controller.abort();
-  }, [selectedContinent]);
+  }, [selectedContinent, directOnly]);
 
   const filteredFlights = useMemo(() => {
     const regionSet = new Set<string>([selectedContinent]);
@@ -350,7 +353,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex gap-3 flex-col sm:flex-row">
+        <div className="mb-6 flex gap-3 flex-col sm:flex-row items-start sm:items-center">
           <Select value={selectedContinent} onValueChange={setSelectedContinent}>
             <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="대륙 선택" />
@@ -376,6 +379,11 @@ const Index = () => {
               ))}
             </SelectContent>
           </Select>
+
+          <label className="flex items-center gap-2 select-none text-sm">
+            <Checkbox checked={directOnly} onCheckedChange={(v:any) => setDirectOnly(Boolean(v))} />
+            직항만 표시
+          </label>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

@@ -8,6 +8,7 @@ export interface ScanParams {
   days: number; // how many days to scan forward e.g., 30
   minTripDays?: number; // default 3
   maxTripDays?: number; // default 7
+  transfer?: number; // -1: all (default), 0: direct, 1: 1-stop
 }
 
 export interface StoredFareRow {
@@ -31,6 +32,7 @@ function formatDate(d: Date) {
 
 export async function scanAndStore(params: ScanParams) {
   const { from, to, startDate, days, minTripDays = 3, maxTripDays = 7 } = params;
+  const transfer = typeof params.transfer === 'number' ? params.transfer : -1;
 
   const base = new Date(startDate);
   const end = new Date(base);
@@ -52,7 +54,7 @@ export async function scanAndStore(params: ScanParams) {
         to,
         departureDate: depStr,
         period: len, // 여행일수만큼 최소 범위로 조회(보수적 접근)
-        transfer: -1,
+        transfer,
         international: true,
         airlines: ["All"],
       });
@@ -73,6 +75,8 @@ export async function scanAndStore(params: ScanParams) {
         min_price: exact?.price ?? null,
         min_airline: exact?.airline ?? null,
         collected_at: new Date().toISOString(),
+        // @ts-ignore store transfer dimension
+        transfer_filter: transfer,
       });
     }
   }
@@ -89,6 +93,9 @@ export async function scanAndStore(params: ScanParams) {
         .update({ is_latest: false })
         .eq("from", f)
         .eq("to", t)
+        // only for same transfer dimension
+        // @ts-ignore
+        .eq("transfer_filter", transfer)
         .eq("is_latest", true);
     }
     // Set latest flag for new rows

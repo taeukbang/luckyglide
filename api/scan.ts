@@ -17,6 +17,7 @@ export default async function handler(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const fromQ = String(url.searchParams.get("from") ?? "ICN");
     const toQ = String(url.searchParams.get("to") ?? "");
+    const transferQ = Number(url.searchParams.get("transfer") ?? -1);
     if (!toQ) return json({ error: "to is required" }, 400);
 
     const SUPABASE_URL = process.env.SUPABASE_URL as string | undefined;
@@ -40,7 +41,7 @@ export default async function handler(req: Request): Promise<Response> {
       depReal.setDate(depReal.getDate() + i);
       const depStr = formatIso(depReal);
       for (let len = minTripDays; len <= maxTripDays; len++) {
-        const payload = { from: fromQ, to: toQ, departureDate: depStr, period: len, transfer: -1, international: true, airlines: ["All"] };
+        const payload = { from: fromQ, to: toQ, departureDate: depStr, period: len, transfer: transferQ, international: true, airlines: ["All"] };
         const r = await fetch(`https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
         if (!r.ok) continue;
         const data = await r.json();
@@ -60,12 +61,14 @@ export default async function handler(req: Request): Promise<Response> {
           min_airline: exact ? String(exact.airline ?? "") : null,
           collected_at: new Date().toISOString(),
           is_latest: true,
+          transfer_filter: transferQ,
         });
       }
     }
 
     // 이전 최신 플래그 해제 후 insert
-    await supabase.from("fares").update({ is_latest: false }).eq("from", fromQ).eq("to", toQ).eq("is_latest", true);
+    await supabase.from("fares").update({ is_latest: false })
+      .eq("from", fromQ).eq("to", toQ).eq("transfer_filter", transferQ).eq("is_latest", true);
     const { error } = await supabase.from("fares").insert(rows);
     if (error) throw error;
 

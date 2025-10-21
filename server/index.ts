@@ -43,10 +43,11 @@ app.post("/api/calendar", async (req, res) => {
 
 app.post("/api/scan", async (req, res) => {
   try {
-    const { from, to } = req.body || {};
+    const { from, to, transfer: bodyTransfer } = req.body || {};
     // Allow querystring fallback for easier triggering: /api/scan?from=ICN&to=FUK
     const fromQ = String((req.query.from as string | undefined) ?? from ?? "");
     const toQ = String((req.query.to as string | undefined) ?? to ?? "");
+    const transferQ = Number((req.query.transfer as string | undefined) ?? (bodyTransfer ?? -1));
     const now = new Date();
     now.setDate(now.getDate() + 1); // 내일
     const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -59,6 +60,7 @@ app.post("/api/scan", async (req, res) => {
       days: 14,
       minTripDays: 3,
       maxTripDays: 7,
+      transfer: transferQ,
     });
     res.json({ ok: true, ...result });
   } catch (e: any) {
@@ -109,6 +111,7 @@ app.get("/api/latest", async (req, res) => {
     const from = String(req.query.from ?? "ICN");
     const region = req.query.region ? String(req.query.region) : null;
     const codesParam = req.query.codes ? String(req.query.codes) : "";
+    const transfer = req.query.transfer ? Number(req.query.transfer) : -1;
 
     // 대상 도시: 지역이 지정되면 해당 지역만, "모두" 또는 미지정이면 전체
     let targets = DESTINATIONS;
@@ -127,9 +130,10 @@ app.get("/api/latest", async (req, res) => {
       return res.status(500).json({ error: "Supabase env missing" });
     }
 
-    // 단일 로직: fares_city_extrema에서 (from,to)별 최저가 행 반환
+    // transfer에 따라 뷰 선택
+    const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
     const { data: extrema, error: errExt } = await supabase
-      .from("fares_city_extrema")
+      .from(view)
       .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at")
       .eq("from", from)
       .in("to", codes);
@@ -141,6 +145,7 @@ app.get("/api/latest", async (req, res) => {
       .select("to,collected_at")
       .eq("from", from)
       .in("to", codes)
+      .eq("transfer_filter", transfer)
       .eq("is_latest", true)
       .order("collected_at", { ascending: false });
     if (errRecent) throw errRecent;
@@ -384,7 +389,7 @@ app.post("/api/calendar-window", async (req, res) => {
 // body: { from, to, startDate?: YYYY-MM-DD (default: tomorrow), days?: number (<= 180), tripDays: number }
 app.post("/api/calendar-window-db", async (req, res) => {
   try {
-    const { from = "ICN", to, startDate, days = 180, tripDays = 3 } = req.body || {};
+    const { from = "ICN", to, startDate, days = 180, tripDays = 3, transfer = -1 } = req.body || {};
     if (!to) return res.status(400).json({ error: "to is required" });
     if (!hasSupabase) return res.status(500).json({ error: "Supabase env missing" });
 
@@ -421,6 +426,7 @@ app.post("/api/calendar-window-db", async (req, res) => {
       .select("departure_date, return_date, trip_days, min_price, collected_at")
       .eq("from", from)
       .eq("to", to)
+      .eq("transfer_filter", transfer)
       .eq("is_latest", true)
       .in("departure_date", depDates)
       .in("return_date", retDates)
