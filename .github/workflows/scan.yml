@@ -17,7 +17,7 @@ on:
         required: false
       days:
         description: "Scan window days"
-        default: "30"
+        default: "180"
         required: false
       minTripDays:
         description: "Min trip days"
@@ -42,7 +42,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SCAN_FROM: ICN
-          SCAN_DAYS: 30
+          SCAN_DAYS: 180
           SCAN_MIN_DAYS: 3
           SCAN_MAX_DAYS: 7
           SCAN_CONCURRENCY: 4
@@ -63,7 +63,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SCAN_FROM: ICN
-          SCAN_DAYS: 30
+          SCAN_DAYS: 180
           SCAN_MIN_DAYS: 3
           SCAN_MAX_DAYS: 7
           SCAN_CONCURRENCY: 4
