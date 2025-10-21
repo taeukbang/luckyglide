@@ -1,5 +1,5 @@
 export const config = { runtime: "edge" };
-import { DESTINATIONS_ALL } from "./_cities";
+import { DESTINATIONS_ALL } from "./_cities.js";
 import { createClient } from "@supabase/supabase-js";
 
 type Item = {
@@ -21,6 +21,7 @@ export default async function handler(req: Request): Promise<Response> {
     const { searchParams } = new URL(req.url);
     const from = String(searchParams.get("from") ?? "ICN");
     const region = searchParams.get("region");
+    const transfer = Number(searchParams.get("transfer") ?? -1);
     const codesParam = String(searchParams.get("codes") ?? "");
 
     let targets = DESTINATIONS_ALL;
@@ -38,8 +39,9 @@ export default async function handler(req: Request): Promise<Response> {
     }
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
     const { data: extrema, error: errExt } = await supabase
-      .from("fares_city_extrema")
+      .from(view)
       .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at")
       .eq("from", from)
       .in("to", codes);
@@ -50,6 +52,7 @@ export default async function handler(req: Request): Promise<Response> {
       .select("to,collected_at")
       .eq("from", from)
       .in("to", codes)
+      .eq("transfer_filter", transfer)
       .eq("is_latest", true)
       .order("collected_at", { ascending: false });
     if (errRecent) throw errRecent;

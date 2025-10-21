@@ -12,7 +12,7 @@ export default async function handler(req: Request): Promise<Response> {
   if ((req as any).method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders() });
   try {
     const body = await req.json().catch(() => ({}));
-    const { from = "ICN", to, startDate, days = 180, tripDays = 3 } = body || {};
+    const { from = "ICN", to, startDate, days = 180, tripDays = 3, transfer = -1 } = body || {};
     if (!to) return json({ error: "to is required" }, 400);
 
     const SUPABASE_URL = process.env.SUPABASE_URL as string | undefined;
@@ -48,6 +48,7 @@ export default async function handler(req: Request): Promise<Response> {
           .select("departure_date, return_date, trip_days, min_price, collected_at")
           .eq("from", from)
           .eq("to", to)
+          .eq("transfer_filter", transfer)
           .eq("is_latest", true)
           .in("departure_date", depC)
           .in("return_date", retC)

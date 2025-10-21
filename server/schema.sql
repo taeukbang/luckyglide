@@ -7,21 +7,22 @@ create table if not exists public.fares (
   trip_days int not null check (trip_days >= 1),
   min_price numeric,
   min_airline text,
+  transfer_filter smallint not null default -1,
   collected_at timestamptz not null default now(),
   is_latest boolean not null default false
 );
 
 -- Helpful indexes for queries
-create index if not exists idx_fares_route_dates on public.fares ("from", "to", departure_date, return_date);
+create index if not exists idx_fares_route_dates on public.fares ("from", "to", transfer_filter, departure_date, return_date);
 create index if not exists idx_fares_collected_at on public.fares (collected_at desc);
-create index if not exists idx_fares_latest_flag on public.fares ("from", "to", is_latest) where is_latest = true;
+create index if not exists idx_fares_latest_flag on public.fares ("from", "to", transfer_filter, is_latest) where is_latest = true;
 
 -- Latest price per route and departure (example view)
 create or replace view public.fares_latest as
 select distinct on ("from", "to", departure_date, return_date)
   "from", "to", departure_date, return_date, trip_days, min_price, min_airline, collected_at
 from public.fares
-where is_latest = true and min_price is not null
+where is_latest = true and min_price is not null and transfer_filter = -1
 order by "from", "to", departure_date, return_date, collected_at desc;
 
 -- Sample query: lowest price per day (most recently collected)
@@ -41,13 +42,53 @@ with ranked as (
     f.min_price,
     f.min_airline,
     f.collected_at,
-    max(f.min_price) over (partition by f."from", f."to") as max_price,
+    max(f.min_price) over (partition by f."from", f."to", f.transfer_filter) as max_price,
     row_number() over (
-      partition by f."from", f."to"
+      partition by f."from", f."to", f.transfer_filter
       order by f.min_price asc nulls last, f.departure_date asc, f.collected_at desc
     ) as rn
   from public.fares f
-  where f.is_latest = true and f.min_price is not null
+  where f.is_latest = true and f.min_price is not null and f.transfer_filter = -1
+)
+select
+  "from",
+  "to",
+  departure_date,
+  return_date,
+  trip_days,
+  min_price,
+  max_price,
+  min_airline,
+  collected_at
+from ranked
+where rn = 1;
+
+-- Direct only variants
+create or replace view public.fares_latest_direct as
+select distinct on ("from", "to", departure_date, return_date)
+  "from", "to", departure_date, return_date, trip_days, min_price, min_airline, collected_at
+from public.fares
+where is_latest = true and min_price is not null and transfer_filter = 0
+order by "from", "to", departure_date, return_date, collected_at desc;
+
+create or replace view public.fares_city_extrema_direct as
+with ranked as (
+  select
+    f."from",
+    f."to",
+    f.departure_date,
+    f.return_date,
+    f.trip_days,
+    f.min_price,
+    f.min_airline,
+    f.collected_at,
+    max(f.min_price) over (partition by f."from", f."to", f.transfer_filter) as max_price,
+    row_number() over (
+      partition by f."from", f."to", f.transfer_filter
+      order by f.min_price asc nulls last, f.departure_date asc, f.collected_at desc
+    ) as rn
+  from public.fares f
+  where f.is_latest = true and f.min_price is not null and f.transfer_filter = 0
 )
 select
   "from",

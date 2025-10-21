@@ -1,5 +1,5 @@
 export const config = { runtime: "edge" };
-import { DESTINATIONS_ALL } from "./_cities";
+import { DESTINATIONS_ALL } from "./_cities.js";
 
 type LiveItem = {
   code: string; city: string; region: string;

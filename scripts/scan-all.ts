@@ -45,6 +45,9 @@ async function main() {
   const minTripDays = Number(process.env.SCAN_MIN_DAYS || 3);
   const maxTripDays = Number(process.env.SCAN_MAX_DAYS || 7);
   const concurrency = Math.max(1, Number(process.env.SCAN_CONCURRENCY || 4));
+  const transfer = (process.env.SCAN_TRANSFER !== undefined && process.env.SCAN_TRANSFER !== null)
+    ? Number(process.env.SCAN_TRANSFER)
+    : -1;
 
   // Optional filters
   const filterRegions = (process.env.SCAN_REGIONS || "")
@@ -65,7 +68,7 @@ async function main() {
   startBase.setDate(startBase.getDate() + 1); // tomorrow
   const startDate = formatIso(startBase);
 
-  console.log(`[scan-all] from=${from} targets=${targets.length} days=${days} tripDays=${minTripDays}-${maxTripDays} concurrency=${concurrency}`);
+  console.log(`[scan-all] from=${from} transfer=${transfer} targets=${targets.length} days=${days} tripDays=${minTripDays}-${maxTripDays} concurrency=${concurrency}`);
 
   const limit = pLimit(concurrency);
   let totalRows = 0;
@@ -75,7 +78,7 @@ async function main() {
   await Promise.all(targets.map(t => limit(async () => {
     const label = `${from}->${t.code}`;
     try {
-      const r = await scanAndStore({ from, to: t.code, startDate, days, minTripDays, maxTripDays });
+      const r = await scanAndStore({ from, to: t.code, startDate, days, minTripDays, maxTripDays, transfer });
       totalRows += r.rows;
       success++;
       console.log(`[ok] ${label} rows=${r.rows}`);

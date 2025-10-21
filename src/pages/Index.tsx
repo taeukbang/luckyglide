@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type LatestItem = {
   code: string;
@@ -72,6 +73,7 @@ const Index = () => {
     { key: "earliestDep", label: "출발일 빠른 순" },
   ];
   const [sortKey, setSortKey] = useState<string>(sortOptions[0].key);
+  const [directOnly, setDirectOnly] = useState<boolean>(false);
   
   useEffect(() => {
     const controller = new AbortController();
@@ -87,10 +89,11 @@ const Index = () => {
         setLoading(true);
         setError(null);
 
-        // DB 캐시 기반 빠른 로딩: /api/latest (region 필터 지원)
+        // DB 캐시 기반 빠른 로딩: /api/latest (region/transfer 필터 지원)
         const qs = new URLSearchParams();
         qs.set('from', 'ICN');
         if (selectedContinent && selectedContinent !== '모두') qs.set('region', selectedContinent);
+        qs.set('transfer', directOnly ? '0' : '-1');
         const res = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -118,7 +121,7 @@ const Index = () => {
 
     progressiveLoad();
     return () => controller.abort();
-  }, [selectedContinent]);
+  }, [selectedContinent, directOnly]);
 
   const filteredFlights = useMemo(() => {
     const regionSet = new Set<string>([selectedContinent]);
@@ -183,6 +186,7 @@ const Index = () => {
           const qs = new URLSearchParams();
           qs.set('from', 'ICN');
           qs.set('codes', selectedFlight.code);
+          qs.set('transfer', directOnly ? '0' : '-1');
           const latestRes = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
           if (latestRes.ok) {
             const data = await latestRes.json();
@@ -205,7 +209,7 @@ const Index = () => {
         const res = await fetch('/api/calendar-window-db', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 180 }),
+          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 180, transfer: directOnly ? 0 : -1 }),
           signal: controller.signal,
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -228,13 +232,14 @@ const Index = () => {
   const handleRefresh = async (code: string) => {
     try {
       setRefreshingCodes(prev => new Set(prev).add(code));
-      // 서버에 해당 목적지만 스캔 요청 → DB 최신값 갱신
-      const res = await fetch(`/api/scan?from=${encodeURIComponent('ICN')}&to=${encodeURIComponent(code)}`, { method: 'POST' });
+      // 서버에 해당 목적지만 스캔 요청 → DB 최신값 갱신 (transfer 차원 반영)
+      const res = await fetch(`/api/scan?from=${encodeURIComponent('ICN')}&to=${encodeURIComponent(code)}&transfer=${encodeURIComponent(directOnly ? 0 : -1)}`, { method: 'POST' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       // 스캔 완료 후 최신값 재조회 (단일 코드)
       const qs = new URLSearchParams();
       qs.set('from', 'ICN');
       qs.set('codes', code);
+      qs.set('transfer', directOnly ? '0' : '-1');
       const latestRes = await fetch(`/api/latest?${qs.toString()}`);
       if (latestRes.ok) {
         const data = await latestRes.json();
@@ -350,7 +355,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex gap-3 flex-col sm:flex-row">
+        <div className="mb-6 flex gap-3 flex-col sm:flex-row items-start sm:items-center">
           <Select value={selectedContinent} onValueChange={setSelectedContinent}>
             <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="대륙 선택" />
@@ -376,6 +381,11 @@ const Index = () => {
               ))}
             </SelectContent>
           </Select>
+
+          <label className="flex items-center gap-2 select-none text-sm">
+            <Checkbox checked={directOnly} onCheckedChange={(v:any) => setDirectOnly(Boolean(v))} />
+            직항만 표시
+          </label>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
