@@ -22,7 +22,8 @@ export default async function handler(req: Request): Promise<Response> {
     const { searchParams } = new URL(req.url);
     const from = String(searchParams.get("from") ?? "ICN");
     const region = searchParams.get("region");
-    const transfer = Number(searchParams.get("transfer") ?? -1);
+    const trParam = searchParams.get("transfer");
+    const transfer = (trParam === "0" || trParam === "-1") ? Number(trParam) : -1;
     const codesParam = String(searchParams.get("codes") ?? "");
 
     let targets = DESTINATIONS_ALL;
@@ -70,8 +71,9 @@ export default async function handler(req: Request): Promise<Response> {
       .select("from,to,sample_rows,p50_price,p25_price,p15_price,p10_price,p05_price,p01_price")
       .eq("from", from)
       .in("to", codes);
-    if (errBase) throw errBase;
-    const baseByTo = new Map<string, any>((baseRows ?? []).map((r: any) => [r.to, r]));
+    // baseline 뷰가 없거나 에러 시에도 아이템은 반환 (배지 미표시)
+    const safeBaseRows = errBase ? [] : (baseRows ?? []);
+    const baseByTo = new Map<string, any>(safeBaseRows.map((r: any) => [r.to, r]));
 
     const items: Item[] = targets.map((t) => {
       const r = byTo.get(t.code);

@@ -112,7 +112,8 @@ app.get("/api/latest", async (req, res) => {
     const from = String(req.query.from ?? "ICN");
     const region = req.query.region ? String(req.query.region) : null;
     const codesParam = req.query.codes ? String(req.query.codes) : "";
-    const transfer = req.query.transfer ? Number(req.query.transfer) : -1;
+    const trRaw = (req.query.transfer as any);
+    const transfer = (String(trRaw) === "0" || Number(trRaw) === 0) ? 0 : -1;
 
     // 대상 도시: 지역이 지정되면 해당 지역만, "모두" 또는 미지정이면 전체
     let targets = DESTINATIONS;
