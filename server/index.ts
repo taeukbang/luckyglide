@@ -134,15 +134,37 @@ app.get("/api/latest", async (req, res) => {
       return res.status(500).json({ error: "Supabase env missing" });
     }
 
-    // transfer에 따라 뷰 선택
-    const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
-    let qExt = supabase
-      .from(view)
-      .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at")
-      .eq("from", from)
-      .in("to", codes);
-    if (tripDaysFilter) qExt = (qExt as any).eq("trip_days", tripDaysFilter);
-    const { data: extrema, error: errExt } = await qExt as any;
+    // tripDays 지정 시: tripDays별 최저가를 직접 계산 (전역 extrema는 trip_days 혼합이라 필터 시 결과가 비는 문제 방지)
+    let extrema: any[] | null = null;
+    if (tripDaysFilter) {
+      const { data: rows, error } = await supabase
+        .from("fares")
+        .select("to, trip_days, min_price, min_airline, departure_date, return_date, collected_at")
+        .eq("from", from)
+        .in("to", codes)
+        .eq("transfer_filter", transfer)
+        .eq("is_latest", true)
+        .eq("trip_days", tripDaysFilter)
+        .order("min_price", { ascending: true })
+        .order("collected_at", { ascending: false });
+      if (error) throw error;
+      // to별 최저가 1행만 선택
+      const seen = new Set<string>();
+      extrema = [];
+      for (const r of rows ?? []) {
+        if (!seen.has(r.to)) { extrema.push(r); seen.add(r.to); }
+      }
+    } else {
+      // 전역(extrema view) 사용
+      const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
+      const { data, error } = await supabase
+        .from(view)
+        .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at")
+        .eq("from", from)
+        .in("to", codes);
+      if (error) throw error;
+      extrema = data ?? [];
+    }
     if (errExt) throw errExt;
 
     // 최근 수집 시점(해당 목적지의 latest rows 중 최대 collected_at)
