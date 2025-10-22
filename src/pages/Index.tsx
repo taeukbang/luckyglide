@@ -391,7 +391,7 @@ const Index = () => {
           </Select>
 
           <Select value={tripDaysSel} onValueChange={setTripDaysSel}>
-            <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectTrigger className="w-full sm:w-[220px]">
               <SelectValue placeholder="여정 길이" />
             </SelectTrigger>
             <SelectContent>
