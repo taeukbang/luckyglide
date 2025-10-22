@@ -45,22 +45,15 @@ export default async function handler(req: Request): Promise<Response> {
 
     let extrema: any[] = [];
     if (tripDaysFilter != null) {
-      // tripDays가 지정되면 전역 뷰가 아닌 fares에서 목적지별 최저가를 직접 계산
-      const { data: rows, error } = await supabase
-        .from("fares")
-        .select("to, trip_days, min_price, min_airline, departure_date, return_date, collected_at")
+      const { data, error } = await supabase
+        .from("fares_city_extrema_tripdays")
+        .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at,transfer_filter")
         .eq("from", from)
         .in("to", codes)
         .eq("transfer_filter", transfer)
-        .eq("is_latest", true)
-        .eq("trip_days", tripDaysFilter)
-        .order("min_price", { ascending: true })
-        .order("collected_at", { ascending: false });
+        .eq("trip_days", tripDaysFilter);
       if (error) throw error;
-      const seen = new Set<string>();
-      for (const r of rows ?? []) {
-        if (!seen.has(r.to)) { extrema.push(r); seen.add(r.to); }
-      }
+      extrema = data ?? [];
     } else {
       const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
       const { data, error } = await supabase

@@ -103,6 +103,41 @@ select
 from ranked
 where rn = 1;
 
+-- Per-destination extrema by trip_days (works for both transfer scopes)
+create or replace view public.fares_city_extrema_tripdays as
+with ranked as (
+  select
+    f."from",
+    f."to",
+    f.departure_date,
+    f.return_date,
+    f.trip_days,
+    f.min_price,
+    f.min_airline,
+    f.collected_at,
+    f.transfer_filter,
+    max(f.min_price) over (partition by f."from", f."to", f.transfer_filter, f.trip_days) as max_price,
+    row_number() over (
+      partition by f."from", f."to", f.transfer_filter, f.trip_days
+      order by f.min_price asc nulls last, f.departure_date asc, f.collected_at desc
+    ) as rn
+  from public.fares f
+  where f.is_latest = true and f.min_price is not null
+)
+select
+  "from",
+  "to",
+  departure_date,
+  return_date,
+  trip_days,
+  min_price,
+  max_price,
+  min_airline,
+  collected_at,
+  transfer_filter
+from ranked
+where rn = 1;
+
 -- Baseline (direct only): price distribution percentiles for upcoming windows
 create or replace view public.fares_baseline_direct as
 select

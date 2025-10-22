@@ -137,23 +137,15 @@ app.get("/api/latest", async (req, res) => {
     // tripDays 지정 시: tripDays별 최저가를 직접 계산 (전역 extrema는 trip_days 혼합이라 필터 시 결과가 비는 문제 방지)
     let extrema: any[] | null = null;
     if (tripDaysFilter != null) {
-      const { data: rows, error } = await supabase
-        .from("fares")
-        .select("to, trip_days, min_price, min_airline, departure_date, return_date, collected_at")
+      const { data, error } = await supabase
+        .from("fares_city_extrema_tripdays")
+        .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at,transfer_filter")
         .eq("from", from)
         .in("to", codes)
         .eq("transfer_filter", transfer)
-        .eq("is_latest", true)
-        .eq("trip_days", tripDaysFilter)
-        .order("min_price", { ascending: true })
-        .order("collected_at", { ascending: false });
+        .eq("trip_days", tripDaysFilter);
       if (error) throw error;
-      // to별 최저가 1행만 선택
-      const seen = new Set<string>();
-      extrema = [];
-      for (const r of rows ?? []) {
-        if (!seen.has(r.to)) { extrema.push(r); seen.add(r.to); }
-      }
+      extrema = data ?? [];
     } else {
       // 전역(extrema view) 사용
       const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
