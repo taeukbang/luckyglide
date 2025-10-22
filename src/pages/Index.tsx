@@ -35,6 +35,7 @@ type LatestItem = {
   airline: string;
   collectedAt: string;
   tripDays?: number | null;
+  meta?: any;
 };
 
 const Index = () => {
@@ -110,6 +111,7 @@ const Index = () => {
           airline: r.airline ?? null as any,
           collectedAt: r.collectedAt ?? '',
           tripDays: (r.tripDays !== null && r.tripDays !== undefined) ? Number(r.tripDays) : null,
+          meta: r.meta ?? null,
         })) as LatestItem[];
         setItems(list);
       } catch (e: any) {

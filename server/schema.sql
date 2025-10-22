@@ -103,4 +103,21 @@ select
 from ranked
 where rn = 1;
 
+-- Baseline (direct only): price distribution percentiles for upcoming windows
+create or replace view public.fares_baseline_direct as
+select
+  f."from",
+  f."to",
+  count(*) as sample_rows,
+  percentile_cont(0.50) within group (order by f.min_price) as p50_price,
+  percentile_cont(0.25) within group (order by f.min_price) as p25_price,
+  percentile_cont(0.10) within group (order by f.min_price) as p10_price,
+  percentile_cont(0.05) within group (order by f.min_price) as p05_price,
+  percentile_cont(0.01) within group (order by f.min_price) as p01_price
+from public.fares f
+where f.is_latest = true
+  and f.transfer_filter = 0
+  and f.min_price is not null
+group by f."from", f."to";
+
 

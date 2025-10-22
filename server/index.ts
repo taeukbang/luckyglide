@@ -152,6 +152,18 @@ app.get("/api/latest", async (req, res) => {
     if (errRecent) throw errRecent;
 
     const byTo = new Map<string, any>((extrema ?? []).map((r: any) => [r.to, r]));
+
+    // Optional: baseline join for direct-only to compute badges
+    let baseByTo: Map<string, any> | null = null;
+    if (transfer === 0) {
+      const { data: baseRows, error: errBase } = await supabase
+        .from("fares_baseline_direct")
+        .select("from,to,sample_rows,p50_price,p25_price,p10_price,p05_price,p01_price")
+        .eq("from", from)
+        .in("to", codes);
+      if (errBase) throw errBase;
+      baseByTo = new Map<string, any>((baseRows ?? []).map((r: any) => [r.to, r]));
+    }
     const latestCollectedByTo = new Map<string, string>();
     for (const row of (recentRows ?? [])) {
       if (!latestCollectedByTo.has(row.to)) {
@@ -161,6 +173,31 @@ app.get("/api/latest", async (req, res) => {
     const itemsOut = targets.map((t) => {
       const r = byTo.get(t.code);
       const lastCollected = latestCollectedByTo.get(t.code) ?? r?.collected_at ?? null;
+      // badge computation (direct only)
+      let meta: any = {};
+      if (transfer === 0 && r) {
+        const b = baseByTo?.get(t.code);
+        const n = Number(b?.sample_rows || 0);
+        const price = (r?.min_price !== null && r?.min_price !== undefined) ? Number(r.min_price) : null;
+        const p50 = b?.p50_price != null ? Number(b.p50_price) : null;
+        const p25 = b?.p25_price != null ? Number(b.p25_price) : null;
+        const p10 = b?.p10_price != null ? Number(b.p10_price) : null;
+        const p05 = b?.p05_price != null ? Number(b.p05_price) : null;
+        const p01 = b?.p01_price != null ? Number(b.p01_price) : null;
+        const MIN_P05 = 50, MIN_P01 = 100;
+        const good = (typeof price === 'number' && typeof p25 === 'number') ? price <= (p25 * 0.90) : false;
+        const hot = (typeof price === 'number') && (
+          (n >= MIN_P05 && typeof p05 === 'number' && price <= p05) ||
+          (typeof p10 === 'number' && price <= p10 * 0.85)
+        );
+        const insane = (typeof price === 'number') && (
+          (n >= MIN_P01 && typeof p01 === 'number' && price <= p01) ||
+          (typeof p10 === 'number' && price <= p10 * 0.70)
+        );
+        const discountVsP50 = (typeof price === 'number' && typeof p50 === 'number') ? Math.round((1 - price / p50) * 100) : null;
+        const baseline = n ? { p50, p25, p10, p05, p01, sample: n } : null;
+        meta = { ...(r?.trip_days ? { tripDays: Number(r.trip_days) } : {}), baseline, isGood: good, isHotDeal: hot, isInsaneDeal: insane, discountVsP50 };
+      }
       return {
         code: t.code,
         city: t.nameKo,
@@ -174,6 +211,7 @@ app.get("/api/latest", async (req, res) => {
         returnDate: r?.return_date ?? null,
         airline: r?.min_airline ?? null,
         collectedAt: lastCollected,
+        meta,
       };
     });
 
