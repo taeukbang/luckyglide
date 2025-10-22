@@ -42,9 +42,9 @@ const Index = () => {
   const [selectedFlight, setSelectedFlight] = useState<any | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedContinent, setSelectedContinent] = useState<string>("모두");
-  const [inviteCodeOpen, setInviteCodeOpen] = useState(true);
+  const [inviteCodeOpen, setInviteCodeOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [items, setItems] = useState<LatestItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
