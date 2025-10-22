@@ -61,24 +61,6 @@ export default async function handler(req: Request): Promise<Response> {
       for (const r of rows ?? []) {
         if (!seen.has(r.to)) { extrema.push(r); seen.add(r.to); }
       }
-      // 폴백: is_latest 스냅샷이 아직 없는 목적지의 경우, 최신 수집값에서 대체
-      const missing = codes.filter((c) => !seen.has(c));
-      if (missing.length) {
-        const { data: rowsAny, error: errAny } = await supabase
-          .from("fares")
-          .select("to, trip_days, min_price, min_airline, departure_date, return_date, collected_at")
-          .eq("from", from)
-          .in("to", missing)
-          .eq("transfer_filter", transfer)
-          .eq("trip_days", tripDaysFilter)
-          .not("min_price", "is", null)
-          .order("collected_at", { ascending: false })
-          .order("min_price", { ascending: true });
-        if (errAny) throw errAny;
-        for (const r of rowsAny ?? []) {
-          if (!seen.has(r.to)) { extrema.push(r); seen.add(r.to); }
-        }
-      }
     } else {
       const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
       const { data, error } = await supabase
