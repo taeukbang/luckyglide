@@ -67,7 +67,7 @@ export default async function handler(req: Request): Promise<Response> {
     const baselineView = transfer === 0 ? "fares_baseline_direct" : "fares_baseline_all";
     const { data: baseRows, error: errBase } = await supabase
       .from(baselineView)
-      .select("from,to,sample_rows,p50_price,p25_price,p10_price,p05_price,p01_price")
+      .select("from,to,sample_rows,p50_price,p25_price,p15_price,p10_price,p05_price,p01_price")
       .eq("from", from)
       .in("to", codes);
     if (errBase) throw errBase;
@@ -79,10 +79,10 @@ export default async function handler(req: Request): Promise<Response> {
       const b = baseByTo.get(t.code);
       const n = Number(b?.sample_rows || 0);
       const price = r?.min_price !== null && r?.min_price !== undefined ? Number(r.min_price) : null;
-      const p25 = b?.p25_price != null ? Number(b.p25_price) : null;
+  const p15 = b?.p15_price != null ? Number(b.p15_price) : null;
       const MIN_SAMPLE = 50;
-      const isGood = (typeof price === 'number' && typeof p25 === 'number' && n >= MIN_SAMPLE && price <= p25 * 0.70);
-      const meta = b ? { baseline: { p25, sample: n, scope: transfer === 0 ? 'direct' : 'all' }, isGood } : null;
+  const isGood = (typeof price === 'number' && typeof p15 === 'number' && n >= MIN_SAMPLE && price <= p15 * 0.70);
+  const meta = b ? { baseline: { p15, sample: n, scope: transfer === 0 ? 'direct' : 'all' }, isGood } : null;
       return {
         code: t.code,
         city: t.nameKo,

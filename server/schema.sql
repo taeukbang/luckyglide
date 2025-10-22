@@ -111,6 +111,7 @@ select
   count(*) as sample_rows,
   percentile_cont(0.50) within group (order by f.min_price) as p50_price,
   percentile_cont(0.25) within group (order by f.min_price) as p25_price,
+  percentile_cont(0.15) within group (order by f.min_price) as p15_price,
   percentile_cont(0.10) within group (order by f.min_price) as p10_price,
   percentile_cont(0.05) within group (order by f.min_price) as p05_price,
   percentile_cont(0.01) within group (order by f.min_price) as p01_price
@@ -128,6 +129,7 @@ select
   count(*) as sample_rows,
   percentile_cont(0.50) within group (order by f.min_price) as p50_price,
   percentile_cont(0.25) within group (order by f.min_price) as p25_price,
+  percentile_cont(0.15) within group (order by f.min_price) as p15_price,
   percentile_cont(0.10) within group (order by f.min_price) as p10_price,
   percentile_cont(0.05) within group (order by f.min_price) as p05_price,
   percentile_cont(0.01) within group (order by f.min_price) as p01_price

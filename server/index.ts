@@ -180,10 +180,10 @@ app.get("/api/latest", async (req, res) => {
         const b = baseByTo?.get(t.code);
         const n = Number(b?.sample_rows || 0);
         const price = (r?.min_price !== null && r?.min_price !== undefined) ? Number(r.min_price) : null;
-        const p25 = b?.p25_price != null ? Number(b.p25_price) : null;
+        const p15 = b?.p15_price != null ? Number(b.p15_price) : null;
         const MIN_SAMPLE = 50;
-        const isGood = (typeof price === 'number' && typeof p25 === 'number' && n >= MIN_SAMPLE && price <= p25 * 0.70);
-        const baseline = n ? { p25, sample: n, scope: (transfer === 0 ? 'direct' : 'all') } : null;
+        const isGood = (typeof price === 'number' && typeof p15 === 'number' && n >= MIN_SAMPLE && price <= p15 * 0.70);
+        const baseline = n ? { p15, sample: n, scope: (transfer === 0 ? 'direct' : 'all') } : null;
         meta = { ...(r?.trip_days ? { tripDays: Number(r.trip_days) } : {}), baseline, isGood };
       }
       return {

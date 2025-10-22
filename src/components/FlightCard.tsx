@@ -113,7 +113,7 @@ export const FlightCard = ({
           <div className="flex flex-col items-end flex-shrink-0">
             <div className="flex items-center gap-1">
               {meta && (meta as any).isGood ? (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 mr-1">좋은가격</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 mr-1">좋은가격</span>
               ) : null}
               <span className="text-lg font-bold text-primary leading-tight">
                 {typeof price === 'number' ? `₩${price.toLocaleString()}` : '로딩 중'}
