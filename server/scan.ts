@@ -102,6 +102,19 @@ export async function scanAndStore(params: ScanParams) {
     const rows = results.map(r => ({ ...r, is_latest: true }));
     const { error } = await supabase.from("fares").insert(rows);
     if (error) throw error;
+
+    // 3) 용량 절감을 위해 해당 노선(from,to,transfer_filter)의 이전 스냅샷(is_latest=false) 삭제
+    for (const key of routeSet) {
+      const [f, t] = key.split("|");
+      await supabase
+        .from("fares")
+        .delete()
+        .eq("from", f)
+        .eq("to", t)
+        // @ts-ignore same transfer dimension only
+        .eq("transfer_filter", transfer)
+        .eq("is_latest", false);
+    }
   }
 
   return { rows: results.length };
