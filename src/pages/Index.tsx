@@ -402,7 +402,7 @@ const Index = () => {
               discount={flight.discount}
               travelDates={flight.travelDates}
               collectedAt={(flight as any).collectedAt}
-              meta={{ code: flight.code, tripDays: (flight as any).meta?.tripDays }}
+              meta={flight.meta}
               onClick={() => handleFlightClick(flight)}
               onShowChart={() => handleFlightClick(flight)}
               // 새로고침 기능은 유지하되 UI는 숨김 처리됨
