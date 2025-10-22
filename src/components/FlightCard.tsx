@@ -116,7 +116,7 @@ export const FlightCard = ({
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 mr-1">좋은가격</span>
               ) : null}
               <span className="text-lg font-bold text-primary leading-tight">
-                {typeof price === 'number' ? `₩${price.toLocaleString()}` : '로딩 중'}
+                {typeof price === 'number' ? `₩${price.toLocaleString()}` : '가격 정보 없음.'}
               </span>
             </div>
             <span className="text-xs text-muted-foreground leading-tight">

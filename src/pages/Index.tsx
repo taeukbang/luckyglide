@@ -68,7 +68,7 @@ const Index = () => {
   };
 
   const continents = ["모두", "아시아", "미주", "유럽", "대양주", "중동", "중남미", "아프리카"];
-  const tripDayOptions = ["상관없음", "3일", "4일", "5일", "6일", "7일"];
+  const tripDayOptions = ["여정 길이 상관없음", "3일", "4일", "5일", "6일", "7일"];
   const sortOptions = [
     { key: "priceAsc", label: "가격 낮은 순" },
     { key: "discountDesc", label: "최고가 대비 할인율 높은 순" },
@@ -97,7 +97,7 @@ const Index = () => {
         qs.set('from', 'ICN');
         if (selectedContinent && selectedContinent !== '모두') qs.set('region', selectedContinent);
         qs.set('transfer', directOnly ? '0' : '-1');
-        if (tripDaysSel !== '상관없음') {
+        if (tripDaysSel !== '여정 길이 상관없음') {
           const td = parseInt(tripDaysSel, 10);
           if (!Number.isNaN(td)) qs.set('tripDays', String(td));
         }
