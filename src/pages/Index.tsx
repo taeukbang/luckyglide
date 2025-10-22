@@ -169,7 +169,7 @@ const Index = () => {
           originalPrice: original as any,
           discount,
           travelDates,
-          meta: { code: it.code, tripDays: it.tripDays ?? undefined },
+          meta: { ...(it as any).meta, code: it.code, tripDays: it.tripDays ?? undefined },
           priceHistory: [] as any,
           continent: it.region ?? "",
         collectedAt: it.collectedAt,
