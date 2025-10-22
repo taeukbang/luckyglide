@@ -189,7 +189,7 @@ export const FlightDetailDialog = ({
                 // 3) 복귀일 = 출발일 + (tripDays-1) — UTC 기준 덧셈으로 변환 오프셋 방지
                 const days = parseInt(tripDuration, 10) || 3;
                 const retIso = addDaysIsoKST(depIso, days - 1);
-                return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso });
+                return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso }, { nonstop: true });
               })()}
               target="_blank"
               rel="noreferrer"

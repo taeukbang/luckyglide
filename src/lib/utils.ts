@@ -13,7 +13,7 @@ export function isMobileUA() {
 
 export function buildMrtBookingUrl(
   params: { from: string; fromNameKo?: string; to: string; toNameKo: string; depdt: string; rtndt: string; adt?: number; chd?: number; inf?: number; cabin?: string },
-  opts?: { mobile?: boolean }
+  opts?: { mobile?: boolean; nonstop?: boolean }
 ) {
   const { from, fromNameKo = "인천", to, toNameKo, depdt, rtndt, adt = 1, chd = 0, inf = 0, cabin = "Y" } = params;
   const useMobile = typeof opts?.mobile === 'boolean' ? opts.mobile : isMobileUA();
@@ -43,7 +43,7 @@ export function buildMrtBookingUrl(
   push("chdcount", String(chd));
   push("infcount", String(inf));
   push("cabinclass", cabin);
-  push("nonstop", "");
+  push("nonstop", opts?.nonstop ? "Y" : "");
   push("freebag", "");
   // original fields (empty placeholders)
   push("orgDepctycd", ""); push("orgDepctycd", ""); push("orgDepctycd", ""); push("orgDepctycd", "");

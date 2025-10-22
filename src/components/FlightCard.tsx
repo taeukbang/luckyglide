@@ -149,7 +149,8 @@ export const FlightCard = ({
                 const [depIso, retIsoRaw] = travelDates.split("~");
                 // 링크는 카드에 표시된 스캔값(출발/복귀일)을 그대로 사용
                 const retIso = retIsoRaw?.trim() || depIso;
-                return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso });
+                const url = buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso }, { nonstop: true });
+                return url;
               })()}
               target="_blank"
               rel="noreferrer"
