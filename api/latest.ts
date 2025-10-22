@@ -13,6 +13,7 @@ type Item = {
   airline: string | null;
   tripDays: number | null;
   collectedAt: string | null;
+  meta?: any;
 };
 
 export default async function handler(req: Request): Promise<Response> {
@@ -21,7 +22,8 @@ export default async function handler(req: Request): Promise<Response> {
     const { searchParams } = new URL(req.url);
     const from = String(searchParams.get("from") ?? "ICN");
     const region = searchParams.get("region");
-    const transfer = Number(searchParams.get("transfer") ?? -1);
+    const trParam = searchParams.get("transfer");
+    const transfer = (trParam === "0" || trParam === "-1") ? Number(trParam) : -1;
     const codesParam = String(searchParams.get("codes") ?? "");
 
     let targets = DESTINATIONS_ALL;
@@ -62,20 +64,39 @@ export default async function handler(req: Request): Promise<Response> {
     for (const row of (recentRows ?? [])) {
       if (!latestCollectedByTo.has(row.to)) latestCollectedByTo.set(row.to, row.collected_at as any);
     }
+    // Baseline join to compute badges
+    const baselineView = transfer === 0 ? "fares_baseline_direct" : "fares_baseline_all";
+    const { data: baseRows, error: errBase } = await supabase
+      .from(baselineView)
+      .select("from,to,sample_rows,p50_price,p25_price,p10_price,p05_price,p01_price")
+      .eq("from", from)
+      .in("to", codes);
+    // baseline 뷰가 없거나 에러 시에도 아이템은 반환 (배지 미표시)
+    const safeBaseRows = errBase ? [] : (baseRows ?? []);
+    const baseByTo = new Map<string, any>(safeBaseRows.map((r: any) => [r.to, r]));
+
     const items: Item[] = targets.map((t) => {
       const r = byTo.get(t.code);
       const lastCollected = latestCollectedByTo.get(t.code) ?? r?.collected_at ?? null;
+      const b = baseByTo.get(t.code);
+      const n = Number(b?.sample_rows || 0);
+      const price = r?.min_price !== null && r?.min_price !== undefined ? Number(r.min_price) : null;
+  const p10 = b?.p10_price != null ? Number(b.p10_price) : null;
+      const MIN_SAMPLE = 50;
+  const isGood = (typeof price === 'number' && typeof p10 === 'number' && n >= MIN_SAMPLE && price <= p10 * 0.70);
+  const meta = b ? { baseline: { p10, sample: n, scope: transfer === 0 ? 'direct' : 'all' }, isGood } : null;
       return {
         code: t.code,
         city: t.nameKo,
         region: t.region,
-        price: r?.min_price !== null && r?.min_price !== undefined ? Number(r.min_price) : null,
+        price,
         originalPrice: r?.max_price !== null && r?.max_price !== undefined ? Number(r.max_price) : null,
         tripDays: r?.trip_days !== null && r?.trip_days !== undefined ? Number(r.trip_days) : null,
         departureDate: r?.departure_date ?? null,
         returnDate: r?.return_date ?? null,
         airline: r?.min_airline ?? null,
         collectedAt: lastCollected,
+        meta,
       } as Item;
     });
 

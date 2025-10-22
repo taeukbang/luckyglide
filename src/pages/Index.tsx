@@ -35,6 +35,7 @@ type LatestItem = {
   airline: string;
   collectedAt: string;
   tripDays?: number | null;
+  meta?: any;
 };
 
 const Index = () => {
@@ -110,6 +111,7 @@ const Index = () => {
           airline: r.airline ?? null as any,
           collectedAt: r.collectedAt ?? '',
           tripDays: (r.tripDays !== null && r.tripDays !== undefined) ? Number(r.tripDays) : null,
+          meta: r.meta ?? null,
         })) as LatestItem[];
         setItems(list);
       } catch (e: any) {
@@ -167,7 +169,7 @@ const Index = () => {
           originalPrice: original as any,
           discount,
           travelDates,
-          meta: { code: it.code, tripDays: it.tripDays ?? undefined },
+          meta: { ...(it as any).meta, code: it.code, tripDays: it.tripDays ?? undefined },
           priceHistory: [] as any,
           continent: it.region ?? "",
         collectedAt: it.collectedAt,
@@ -400,7 +402,7 @@ const Index = () => {
               discount={flight.discount}
               travelDates={flight.travelDates}
               collectedAt={(flight as any).collectedAt}
-              meta={{ code: flight.code, tripDays: (flight as any).meta?.tripDays }}
+              meta={flight.meta}
               onClick={() => handleFlightClick(flight)}
               onShowChart={() => handleFlightClick(flight)}
               // 새로고침 기능은 유지하되 UI는 숨김 처리됨

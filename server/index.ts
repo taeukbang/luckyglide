@@ -112,7 +112,8 @@ app.get("/api/latest", async (req, res) => {
     const from = String(req.query.from ?? "ICN");
     const region = req.query.region ? String(req.query.region) : null;
     const codesParam = req.query.codes ? String(req.query.codes) : "";
-    const transfer = req.query.transfer ? Number(req.query.transfer) : -1;
+    const trRaw = (req.query.transfer as any);
+    const transfer = (String(trRaw) === "0" || Number(trRaw) === 0) ? 0 : -1;
 
     // 대상 도시: 지역이 지정되면 해당 지역만, "모두" 또는 미지정이면 전체
     let targets = DESTINATIONS;
@@ -152,6 +153,19 @@ app.get("/api/latest", async (req, res) => {
     if (errRecent) throw errRecent;
 
     const byTo = new Map<string, any>((extrema ?? []).map((r: any) => [r.to, r]));
+
+    // Optional: baseline join to compute badges (direct or all)
+    let baseByTo: Map<string, any> | null = null;
+    {
+      const baselineView = transfer === 0 ? "fares_baseline_direct" : "fares_baseline_all";
+      const { data: baseRows, error: errBase } = await supabase
+        .from(baselineView)
+        .select("from,to,sample_rows,p50_price,p25_price,p10_price,p05_price,p01_price")
+        .eq("from", from)
+        .in("to", codes);
+      if (errBase) throw errBase;
+      baseByTo = new Map<string, any>((baseRows ?? []).map((r: any) => [r.to, r]));
+    }
     const latestCollectedByTo = new Map<string, string>();
     for (const row of (recentRows ?? [])) {
       if (!latestCollectedByTo.has(row.to)) {
@@ -161,6 +175,18 @@ app.get("/api/latest", async (req, res) => {
     const itemsOut = targets.map((t) => {
       const r = byTo.get(t.code);
       const lastCollected = latestCollectedByTo.get(t.code) ?? r?.collected_at ?? null;
+      // badge computation (transfer scope aware) - simplified: only isGood
+      let meta: any = {};
+      if (r) {
+        const b = baseByTo?.get(t.code);
+        const n = Number(b?.sample_rows || 0);
+        const price = (r?.min_price !== null && r?.min_price !== undefined) ? Number(r.min_price) : null;
+        const p10 = b?.p10_price != null ? Number(b.p10_price) : null;
+        const MIN_SAMPLE = 50;
+        const isGood = (typeof price === 'number' && typeof p10 === 'number' && n >= MIN_SAMPLE && price <= p10 * 0.70);
+        const baseline = n ? { p10, sample: n, scope: (transfer === 0 ? 'direct' : 'all') } : null;
+        meta = { ...(r?.trip_days ? { tripDays: Number(r.trip_days) } : {}), baseline, isGood };
+      }
       return {
         code: t.code,
         city: t.nameKo,
@@ -174,6 +200,7 @@ app.get("/api/latest", async (req, res) => {
         returnDate: r?.return_date ?? null,
         airline: r?.min_airline ?? null,
         collectedAt: lastCollected,
+        meta,
       };
     });
 

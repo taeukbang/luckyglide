@@ -112,12 +112,12 @@ export const FlightCard = ({
           
           <div className="flex flex-col items-end flex-shrink-0">
             <div className="flex items-center gap-1">
+              {meta && (meta as any).isGood ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 mr-1">좋은가격</span>
+              ) : null}
               <span className="text-lg font-bold text-primary leading-tight">
                 {typeof price === 'number' ? `₩${price.toLocaleString()}` : '로딩 중'}
               </span>
-              {typeof price === 'number' && typeof originalPrice === 'number' && originalPrice > price ? (
-                <span className="text-xs text-destructive font-medium">(-{Math.max(0, 100 - Math.round((price / originalPrice) * 100))}%)</span>
-              ) : null}
             </div>
             <span className="text-xs text-muted-foreground leading-tight">
               ({travelDates}{meta?.tripDays ? `, ${meta.tripDays}일` : ""})
