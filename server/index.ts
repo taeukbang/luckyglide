@@ -114,6 +114,8 @@ app.get("/api/latest", async (req, res) => {
     const codesParam = req.query.codes ? String(req.query.codes) : "";
     const trRaw = (req.query.transfer as any);
     const transfer = (String(trRaw) === "0" || Number(trRaw) === 0) ? 0 : -1;
+    const tdRaw = req.query.tripDays as any;
+    const tripDaysFilter = tdRaw !== undefined && tdRaw !== null && tdRaw !== '' && !Number.isNaN(Number(tdRaw)) ? Number(tdRaw) : null;
 
     // 대상 도시: 지역이 지정되면 해당 지역만, "모두" 또는 미지정이면 전체
     let targets = DESTINATIONS;
@@ -134,15 +136,17 @@ app.get("/api/latest", async (req, res) => {
 
     // transfer에 따라 뷰 선택
     const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
-    const { data: extrema, error: errExt } = await supabase
+    let qExt = supabase
       .from(view)
       .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at")
       .eq("from", from)
       .in("to", codes);
+    if (tripDaysFilter) qExt = (qExt as any).eq("trip_days", tripDaysFilter);
+    const { data: extrema, error: errExt } = await qExt as any;
     if (errExt) throw errExt;
 
     // 최근 수집 시점(해당 목적지의 latest rows 중 최대 collected_at)
-    const { data: recentRows, error: errRecent } = await supabase
+    let qRecent = supabase
       .from("fares")
       .select("to,collected_at")
       .eq("from", from)
@@ -150,6 +154,8 @@ app.get("/api/latest", async (req, res) => {
       .eq("transfer_filter", transfer)
       .eq("is_latest", true)
       .order("collected_at", { ascending: false });
+    if (tripDaysFilter) qRecent = (qRecent as any).eq("trip_days", tripDaysFilter);
+    const { data: recentRows, error: errRecent } = await qRecent as any;
     if (errRecent) throw errRecent;
 
     const byTo = new Map<string, any>((extrema ?? []).map((r: any) => [r.to, r]));

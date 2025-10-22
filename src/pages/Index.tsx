@@ -68,6 +68,7 @@ const Index = () => {
   };
 
   const continents = ["모두", "아시아", "미주", "유럽", "대양주", "중동", "중남미", "아프리카"];
+  const tripDayOptions = ["상관없음", "3일", "4일", "5일", "6일", "7일"];
   const sortOptions = [
     { key: "priceAsc", label: "가격 낮은 순" },
     { key: "discountDesc", label: "최고가 대비 할인율 높은 순" },
@@ -75,6 +76,7 @@ const Index = () => {
   ];
   const [sortKey, setSortKey] = useState<string>(sortOptions[0].key);
   const [directOnly, setDirectOnly] = useState<boolean>(false);
+  const [tripDaysSel, setTripDaysSel] = useState<string>(tripDayOptions[0]);
   
   useEffect(() => {
     const controller = new AbortController();
@@ -95,6 +97,10 @@ const Index = () => {
         qs.set('from', 'ICN');
         if (selectedContinent && selectedContinent !== '모두') qs.set('region', selectedContinent);
         qs.set('transfer', directOnly ? '0' : '-1');
+        if (tripDaysSel !== '상관없음') {
+          const td = parseInt(tripDaysSel, 10);
+          if (!Number.isNaN(td)) qs.set('tripDays', String(td));
+        }
         const res = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -123,7 +129,7 @@ const Index = () => {
 
     progressiveLoad();
     return () => controller.abort();
-  }, [selectedContinent, directOnly]);
+  }, [selectedContinent, directOnly, tripDaysSel]);
 
   const filteredFlights = useMemo(() => {
     const regionSet = new Set<string>([selectedContinent]);
@@ -380,6 +386,17 @@ const Index = () => {
                 <SelectItem key={o.key} value={o.key}>
                   {o.label}
                 </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={tripDaysSel} onValueChange={setTripDaysSel}>
+            <SelectTrigger className="w-full sm:w-[160px]">
+              <SelectValue placeholder="여정 길이" />
+            </SelectTrigger>
+            <SelectContent>
+              {tripDayOptions.map((o) => (
+                <SelectItem key={o} value={o}>{o}</SelectItem>
               ))}
             </SelectContent>
           </Select>
