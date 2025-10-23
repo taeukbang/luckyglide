@@ -82,6 +82,7 @@ const Index = () => {
   const [cityQuery, setCityQuery] = useState<string>("");
   const [fixedDepIso, setFixedDepIso] = useState<string | null>(null);
   const [fixedRetIso, setFixedRetIso] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   
   useEffect(() => {
     const controller = new AbortController();
@@ -375,26 +376,17 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* 1행: 도시 검색 */}
-        <div className="mb-3 flex gap-3 items-center">
+        {/* 1행: 도시 검색 + 고급 필터 토글 */}
+        <div className="mb-3 flex gap-2 items-center">
           <Input className="w-full sm:w-[300px]" placeholder="도시명으로 검색" value={cityQuery} onChange={(e)=>setCityQuery(e.target.value)} />
+          <Button variant="outline" className="whitespace-nowrap" onClick={()=>setShowAdvanced(v=>!v)}>
+            {showAdvanced ? '검색 조건 접기' : '검색 조건 추가하기'}
+          </Button>
         </div>
 
-        {/* 2행: 셀렉트 + 일정 입력 + 직항 체크 (모바일 한 줄 가로 배치 지향) */}
+        {/* 2행: 고급 조건(정렬/여정 길이/일정/직항) */}
+        {showAdvanced && (
         <div className="mb-3 flex gap-2 flex-row flex-wrap items-center">
-          <Select value={selectedContinent} onValueChange={setSelectedContinent}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="대륙 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {continents.map((continent) => (
-                <SelectItem key={continent} value={continent}>
-                  {continent}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
           <Select value={sortKey} onValueChange={setSortKey}>
             <SelectTrigger className="w-[180px] sm:w-[220px]">
               <SelectValue placeholder="정렬" />
@@ -428,9 +420,10 @@ const Index = () => {
 
           <label className="flex items-center gap-2 select-none text-sm">
             <Checkbox checked={directOnly} onCheckedChange={(v:any) => setDirectOnly(Boolean(v))} />
-            직항만 표시
+            직항 여부
           </label>
         </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredFlights.map((flight) => (
