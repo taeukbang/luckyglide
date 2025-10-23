@@ -420,11 +420,13 @@ const Index = () => {
           </div>
 
           {/* 여정 일정 */}
-          <div className="flex flex-row items-center gap-2 flex-wrap">
-            <span className="w-20 text-sm text-muted-foreground">여정 일정</span>
-            <Input className="w-[150px] sm:w-[140px]" placeholder="출발일 YYYY-MM-DD" value={fixedDepIso ?? ''} onChange={(e)=>setFixedDepIso(e.target.value || null)} />
-            <span className="text-muted-foreground">~</span>
-            <Input className="w-[150px] sm:w-[140px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-muted-foreground">여정 일정</span>
+            <div className="flex items-center gap-2 flex-nowrap">
+              <Input className="w-[164px] sm:w-[160px]" placeholder="출발일 YYYY-MM-DD" value={fixedDepIso ?? ''} onChange={(e)=>setFixedDepIso(e.target.value || null)} />
+              <span className="text-muted-foreground">~</span>
+              <Input className="w-[164px] sm:w-[160px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
+            </div>
           </div>
 
           {/* 직항 여부 */}
