@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
+// 달력 제거: 출발/도착일 직접 입력으로 대체
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -81,6 +81,7 @@ const Index = () => {
   // 새 필터: 도시 검색어, 일정(출발일) 고정
   const [cityQuery, setCityQuery] = useState<string>("");
   const [fixedDepIso, setFixedDepIso] = useState<string | null>(null);
+  const [fixedRetIso, setFixedRetIso] = useState<string | null>(null);
   
   useEffect(() => {
     const controller = new AbortController();
@@ -106,6 +107,7 @@ const Index = () => {
           if (!Number.isNaN(td)) qs.set('tripDays', String(td));
         }
         if (fixedDepIso) qs.set('dep', fixedDepIso);
+        if (fixedRetIso) qs.set('ret', fixedRetIso);
         const res = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -134,7 +136,7 @@ const Index = () => {
 
     progressiveLoad();
     return () => controller.abort();
-  }, [selectedContinent, directOnly, tripDaysSel, fixedDepIso]);
+  }, [selectedContinent, directOnly, tripDaysSel, fixedDepIso, fixedRetIso]);
 
   const filteredFlights = useMemo(() => {
     const regionSet = new Set<string>([selectedContinent]);
@@ -423,27 +425,21 @@ const Index = () => {
           </label>
         </div>
 
-        {/* 3행: 일정 선택(출발일 고정) */}
-        <div className="mb-6">
-          <div className="text-sm text-muted-foreground mb-2">일정 선택(출발일 고정): 캘린더에서 날짜를 선택하면 카드가 해당 일정으로 고정돼 최저가를 보여줍니다.</div>
-          <div className="bg-card border border-border rounded-md p-3 w-full sm:w-[340px]">
-            <Calendar
-              mode="single"
-              selected={fixedDepIso ? new Date(fixedDepIso) : undefined}
-              onSelect={(d:any)=>{
-                if (!d) { setFixedDepIso(null); return; }
-                const y = d.getFullYear();
-                const m = String(d.getMonth()+1).padStart(2,'0');
-                const da = String(d.getDate()).padStart(2,'0');
-                setFixedDepIso(`${y}-${m}-${da}`);
-              }}
-            />
-            {fixedDepIso ? (
-              <div className="mt-2 text-xs text-muted-foreground">선택한 출발일: {fixedDepIso} (해제하려면 달력에서 빈 곳 클릭)</div>
-            ) : (
-              <div className="mt-2 text-xs text-muted-foreground">출발일을 선택하지 않으면 자동 최저가가 표시됩니다.</div>
-            )}
+        {/* 3행: 일정 선택(출발/도착일 직접 입력) */}
+        <div className="mb-6 flex flex-col gap-2">
+          <div className="text-sm text-muted-foreground">일정 검색: 출발일 YYYY-MM-DD ~ 도착일 YYYY-MM-DD</div>
+          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+            <Input className="w-full sm:w-[180px]" placeholder="출발일 YYYY-MM-DD" value={fixedDepIso ?? ''} onChange={(e)=>setFixedDepIso(e.target.value || null)} />
+            <span className="text-muted-foreground">~</span>
+            <Input className="w-full sm:w-[180px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
+            <Button variant="outline" onClick={()=>{ /* 유효성 간단 체크 */
+              const iso = /^\d{4}-\d{2}-\d{2}$/;
+              if (fixedDepIso && !iso.test(fixedDepIso)) alert('출발일 형식이 올바르지 않습니다.');
+              if (fixedRetIso && !iso.test(fixedRetIso)) alert('도착일 형식이 올바르지 않습니다.');
+            }}>형식 확인</Button>
+            <Button variant="ghost" onClick={()=>{ setFixedDepIso(null); setFixedRetIso(null); }}>초기화</Button>
           </div>
+          <div className="text-xs text-muted-foreground">- 날짜를 비워두면 자동 최저가를 표시합니다. 특정 날짜를 입력하면 해당 일정의 최저가만 보여줍니다.</div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

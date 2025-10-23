@@ -30,6 +30,8 @@ export default async function handler(req: Request): Promise<Response> {
     // 특정 출발일 고정(모든 목적지 동일 출발일로 조회)
     const depParam = searchParams.get("dep"); // YYYY-MM-DD
     const depIso = depParam && /^\d{4}-\d{2}-\d{2}$/.test(depParam) ? depParam : null;
+    const retParam = searchParams.get("ret");
+    const retIso = retParam && /^\d{4}-\d{2}-\d{2}$/.test(retParam) ? retParam : null;
 
     let targets = DESTINATIONS_ALL;
     if (region && region !== "모두") targets = targets.filter((d) => d.region === region);
@@ -47,7 +49,23 @@ export default async function handler(req: Request): Promise<Response> {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let extrema: any[] = [];
-    if (depIso && tripDaysFilter != null) {
+    if (depIso && retIso) {
+      // 출발/도착일이 모두 고정된 경우: fares에서 해당 날짜의 최신 스냅샷을 목적지별 1건씩
+      const { data, error } = await supabase
+        .from("fares")
+        .select("from,to,departure_date,return_date,trip_days,min_price,min_airline,collected_at,transfer_filter")
+        .eq("from", from)
+        .in("to", codes)
+        .eq("transfer_filter", transfer)
+        .eq("is_latest", true)
+        .eq("departure_date", depIso)
+        .eq("return_date", retIso)
+        .order("collected_at", { ascending: false });
+      if (error) throw error;
+      const byTo = new Map<string, any>();
+      for (const row of data ?? []) if (!byTo.has(row.to)) byTo.set(row.to, row);
+      extrema = Array.from(byTo.values());
+    } else if (depIso && tripDaysFilter != null) {
       // 일정 고정 모드: fares 테이블에서 해당 출발/복귀일 스냅샷을 직접 조회
       const retIso = addDaysIsoKST(depIso, Math.max(1, Number(tripDaysFilter)) - 1);
       const { data, error } = await supabase
@@ -97,9 +115,10 @@ export default async function handler(req: Request): Promise<Response> {
       .eq("is_latest", true)
       .order("collected_at", { ascending: false });
     if (tripDaysFilter) qRecent = (qRecent as any).eq("trip_days", tripDaysFilter);
-    if (depIso && tripDaysFilter != null) {
-      const retIso = addDaysIsoKST(depIso, Math.max(1, Number(tripDaysFilter)) - 1);
-      qRecent = (qRecent as any).eq("departure_date", depIso).eq("return_date", retIso);
+    if (depIso && retIso) qRecent = (qRecent as any).eq("departure_date", depIso).eq("return_date", retIso);
+    else if (depIso && tripDaysFilter != null) {
+      const retIsoCalc = addDaysIsoKST(depIso, Math.max(1, Number(tripDaysFilter)) - 1);
+      qRecent = (qRecent as any).eq("departure_date", depIso).eq("return_date", retIsoCalc);
     }
     const { data: recentRows, error: errRecent } = await qRecent as any;
     if (errRecent) throw errRecent;
