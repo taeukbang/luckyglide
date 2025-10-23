@@ -376,12 +376,12 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {/* 1행: 도시 검색 */}
-        <div className="mb-3 flex gap-3 flex-col sm:flex-row items-start sm:items-center">
+        <div className="mb-3 flex gap-3 items-center">
           <Input className="w-full sm:w-[300px]" placeholder="도시명으로 검색" value={cityQuery} onChange={(e)=>setCityQuery(e.target.value)} />
         </div>
 
-        {/* 2행: 기존 셀렉트 + 직항 체크 */}
-        <div className="mb-3 flex gap-3 flex-col sm:flex-row items-start sm:items-center">
+        {/* 2행: 셀렉트 + 일정 입력 + 직항 체크 (모바일 한 줄 가로 배치 지향) */}
+        <div className="mb-3 flex gap-2 flex-row flex-wrap items-center">
           <Select value={selectedContinent} onValueChange={setSelectedContinent}>
             <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="대륙 선택" />
@@ -396,7 +396,7 @@ const Index = () => {
           </Select>
 
           <Select value={sortKey} onValueChange={setSortKey}>
-            <SelectTrigger className="w-full sm:w-[260px]">
+            <SelectTrigger className="w-[180px] sm:w-[220px]">
               <SelectValue placeholder="정렬" />
             </SelectTrigger>
             <SelectContent>
@@ -409,7 +409,7 @@ const Index = () => {
           </Select>
 
           <Select value={tripDaysSel} onValueChange={setTripDaysSel}>
-            <SelectTrigger className="w-full sm:w-[220px]">
+            <SelectTrigger className="w-[150px] sm:w-[200px]">
               <SelectValue placeholder="여정 길이" />
             </SelectTrigger>
             <SelectContent>
@@ -419,27 +419,17 @@ const Index = () => {
             </SelectContent>
           </Select>
 
+          {/* 일정 입력: 출발일 ~ 도착일 (YYYY-MM-DD) */}
+          <div className="flex items-center gap-1">
+            <Input className="w-[140px]" placeholder="출발일 YYYY-MM-DD" value={fixedDepIso ?? ''} onChange={(e)=>setFixedDepIso(e.target.value || null)} />
+            <span className="text-muted-foreground">~</span>
+            <Input className="w-[140px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
+          </div>
+
           <label className="flex items-center gap-2 select-none text-sm">
             <Checkbox checked={directOnly} onCheckedChange={(v:any) => setDirectOnly(Boolean(v))} />
             직항만 표시
           </label>
-        </div>
-
-        {/* 3행: 일정 선택(출발/도착일 직접 입력) */}
-        <div className="mb-6 flex flex-col gap-2">
-          <div className="text-sm text-muted-foreground">일정 검색: 출발일 YYYY-MM-DD ~ 도착일 YYYY-MM-DD</div>
-          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-            <Input className="w-full sm:w-[180px]" placeholder="출발일 YYYY-MM-DD" value={fixedDepIso ?? ''} onChange={(e)=>setFixedDepIso(e.target.value || null)} />
-            <span className="text-muted-foreground">~</span>
-            <Input className="w-full sm:w-[180px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
-            <Button variant="outline" onClick={()=>{ /* 유효성 간단 체크 */
-              const iso = /^\d{4}-\d{2}-\d{2}$/;
-              if (fixedDepIso && !iso.test(fixedDepIso)) alert('출발일 형식이 올바르지 않습니다.');
-              if (fixedRetIso && !iso.test(fixedRetIso)) alert('도착일 형식이 올바르지 않습니다.');
-            }}>형식 확인</Button>
-            <Button variant="ghost" onClick={()=>{ setFixedDepIso(null); setFixedRetIso(null); }}>초기화</Button>
-          </div>
-          <div className="text-xs text-muted-foreground">- 날짜를 비워두면 자동 최저가를 표시합니다. 특정 날짜를 입력하면 해당 일정의 최저가만 보여줍니다.</div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
