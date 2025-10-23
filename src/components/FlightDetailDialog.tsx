@@ -160,8 +160,16 @@ export const FlightDetailDialog = ({
 
           <div className="space-y-2">
             <h4 className="font-semibold text-lg">날짜별 가격 추이</h4>
-            {/* 기간 변경 시 강제 리마운트로 그래프 갱신 보장 */}
-            <PriceChart key={`chart-${tripDuration}`} data={priceData} tripDays={parseInt(String(tripDuration), 10) || (tripDays || 3)} />
+            {/* 기간 변경 시 강제 리마운트로 그래프 갱신 보장 + hover 예약 버튼 */}
+            <PriceChart
+              key={`chart-${tripDuration}`}
+              data={priceData}
+              tripDays={parseInt(String(tripDuration), 10) || (tripDays || 3)}
+              bookingFromCode="ICN"
+              bookingToCode={code}
+              bookingToNameKo={city}
+              nonstop
+            />
           </div>
 
           <div className="flex gap-3 pt-4">

@@ -1,4 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot } from "recharts";
+import { buildMrtBookingUrl, addDaysIsoKST } from "@/lib/utils";
 
 interface PriceChartProps {
   data: {
@@ -6,9 +7,13 @@ interface PriceChartProps {
     price: number;
   }[];
   tripDays: number;
+  bookingFromCode?: string;
+  bookingToCode?: string;
+  bookingToNameKo?: string;
+  nonstop?: boolean;
 }
 
-export const PriceChart = ({ data, tripDays }: PriceChartProps) => {
+export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToCode, bookingToNameKo, nonstop }: PriceChartProps) => {
   const toMMDD = (d: Date) => {
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const da = String(d.getDate()).padStart(2, "0");
@@ -28,11 +33,36 @@ export const PriceChart = ({ data, tripDays }: PriceChartProps) => {
     const arr = new Date(dep);
     const len = Math.max(1, Number(tripDays) || 1);
     arr.setDate(arr.getDate() + (len - 1));
+    const yyyy = new Date().getFullYear();
+    const toIso = (d: Date) => {
+      const y = yyyy;
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${da}`;
+    };
+    const depIso = toIso(dep);
+    const retIso = addDaysIsoKST(depIso, len - 1);
+    const bookingUrl = (bookingToCode && bookingToNameKo)
+      ? buildMrtBookingUrl({ from: bookingFromCode, to: bookingToCode, toNameKo: bookingToNameKo, fromNameKo: "인천", depdt: depIso, rtndt: retIso }, { nonstop: !!nonstop })
+      : null;
     return (
       <div style={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, padding: 8 }}>
         <div style={{ color: "hsl(var(--foreground))", fontSize: 12 }}>출발일: {toMMDD(dep)}</div>
         <div style={{ color: "hsl(var(--foreground))", fontSize: 12 }}>도착일: {toMMDD(arr)}</div>
         <div style={{ color: "hsl(var(--foreground))", fontSize: 12, marginTop: 4 }}>가격: ₩{price.toLocaleString()}</div>
+        {bookingUrl ? (
+          <div style={{ marginTop: 8 }}>
+            <a href={bookingUrl} target="_blank" rel="noreferrer" style={{
+              display: "inline-block",
+              fontSize: 12,
+              padding: "6px 10px",
+              borderRadius: 6,
+              background: "hsl(var(--primary))",
+              color: "hsl(var(--primary-foreground))",
+              textDecoration: "none"
+            }}>이 가격으로 예약하기</a>
+          </div>
+        ) : null}
       </div>
     );
   };
