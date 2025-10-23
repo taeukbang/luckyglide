@@ -386,42 +386,52 @@ const Index = () => {
 
         {/* 2행: 고급 조건(정렬/여정 길이/일정/직항) */}
         {showAdvanced && (
-        <div className="mb-3 flex gap-2 flex-row flex-wrap items-center">
-          <Select value={sortKey} onValueChange={setSortKey}>
-            <SelectTrigger className="w-[180px] sm:w-[220px]">
-              <SelectValue placeholder="정렬" />
-            </SelectTrigger>
-            <SelectContent>
-              {sortOptions.map((o) => (
-                <SelectItem key={o.key} value={o.key}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={tripDaysSel} onValueChange={setTripDaysSel}>
-            <SelectTrigger className="w-[150px] sm:w-[200px]">
-              <SelectValue placeholder="여정 길이" />
-            </SelectTrigger>
-            <SelectContent>
-              {tripDayOptions.map((o) => (
-                <SelectItem key={o} value={o}>{o}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* 일정 입력: 출발일 ~ 도착일 (YYYY-MM-DD) */}
-          <div className="flex items-center gap-1">
-            <Input className="w-[140px]" placeholder="출발일 YYYY-MM-DD" value={fixedDepIso ?? ''} onChange={(e)=>setFixedDepIso(e.target.value || null)} />
-            <span className="text-muted-foreground">~</span>
-            <Input className="w-[140px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
+        <div className="mb-4 space-y-2">
+          {/* 정렬 방식 */}
+          <div className="flex items-center gap-2">
+            <span className="w-20 text-sm text-muted-foreground">정렬 방식</span>
+            <Select value={sortKey} onValueChange={setSortKey}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="정렬 방식" />
+              </SelectTrigger>
+              <SelectContent>
+                {sortOptions.map((o) => (
+                  <SelectItem key={o.key} value={o.key}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <label className="flex items-center gap-2 select-none text-sm">
+          {/* 여정 길이 */}
+          <div className="flex items-center gap-2">
+            <span className="w-20 text-sm text-muted-foreground">여정 길이</span>
+            <Select value={tripDaysSel} onValueChange={setTripDaysSel}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="여정 길이" />
+              </SelectTrigger>
+              <SelectContent>
+                {tripDayOptions.map((o) => (
+                  <SelectItem key={o} value={o}>{o}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 여정 일정 */}
+          <div className="flex items-center gap-2">
+            <span className="w-20 text-sm text-muted-foreground">여정 일정</span>
+            <Input className="w-[150px]" placeholder="출발일 YYYY-MM-DD" value={fixedDepIso ?? ''} onChange={(e)=>setFixedDepIso(e.target.value || null)} />
+            <span className="text-muted-foreground">~</span>
+            <Input className="w-[150px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
+          </div>
+
+          {/* 직항 여부 */}
+          <div className="flex items-center gap-2">
+            <span className="w-20 text-sm text-muted-foreground">직항 여부</span>
             <Checkbox checked={directOnly} onCheckedChange={(v:any) => setDirectOnly(Boolean(v))} />
-            직항 여부
-          </label>
+          </div>
         </div>
         )}
 
