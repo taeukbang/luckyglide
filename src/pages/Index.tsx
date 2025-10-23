@@ -408,7 +408,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <span className="w-full sm:w-20 text-sm text-muted-foreground">여정 길이</span>
             <Select value={tripDaysSel} onValueChange={setTripDaysSel}>
-              <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="여정 길이" />
               </SelectTrigger>
               <SelectContent>
@@ -422,10 +422,10 @@ const Index = () => {
           {/* 여정 일정 */}
           <div className="flex flex-col gap-1">
             <span className="text-sm text-muted-foreground">여정 일정</span>
-            <div className="flex items-center gap-2 flex-nowrap">
+            <div className="flex items-center gap-2 w-full">
               <Input className="w-[164px] sm:w-[160px]" placeholder="출발일 YYYY-MM-DD" value={fixedDepIso ?? ''} onChange={(e)=>setFixedDepIso(e.target.value || null)} />
               <span className="text-muted-foreground">~</span>
-              <Input className="w-[164px] sm:w-[160px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
+              <Input className="flex-1 min-w-[164px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
             </div>
           </div>
 
