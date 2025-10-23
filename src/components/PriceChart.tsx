@@ -1,5 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot } from "recharts";
 import { buildMrtBookingUrl, addDaysIsoKST } from "@/lib/utils";
+import { useState } from "react";
 
 interface PriceChartProps {
   data: {
@@ -14,6 +15,8 @@ interface PriceChartProps {
 }
 
 export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToCode, bookingToNameKo, nonstop }: PriceChartProps) => {
+  const [lockedIndex, setLockedIndex] = useState<number | null>(null);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const toMMDD = (d: Date) => {
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const da = String(d.getDate()).padStart(2, "0");
@@ -80,10 +83,34 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     return <circle cx={cx} cy={cy} r={r} fill={fill} stroke={stroke} strokeWidth={isMin ? 2 : 1} />;
   };
 
+  const effectiveTooltip = (() => {
+    const idx = lockedIndex ?? hoverIndex;
+    if (idx != null && data[idx]) {
+      const d = data[idx];
+      return (
+        <Tooltip active payload={[{ value: d.price }]} label={d.date} content={<CustomTooltip />} wrapperStyle={{ pointerEvents: 'auto' }} />
+      );
+    }
+    return <Tooltip content={<CustomTooltip />} wrapperStyle={{ pointerEvents: 'auto' }} />;
+  })();
+
   return (
-    <div className="w-full h-[300px]">
+    <div className="w-full h-[300px] select-none">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <LineChart
+          data={data}
+          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+          onMouseMove={(s: any) => {
+            if (lockedIndex != null) return; // 잠금 시 hover 무시
+            const idx = typeof s?.activeTooltipIndex === 'number' ? s.activeTooltipIndex : null;
+            setHoverIndex(idx);
+          }}
+          onMouseLeave={() => { if (lockedIndex == null) setHoverIndex(null); }}
+          onClick={(s: any) => {
+            const idx = typeof s?.activeTooltipIndex === 'number' ? s.activeTooltipIndex : null;
+            if (idx != null) setLockedIndex(prev => prev === idx ? null : idx);
+          }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           <XAxis
             dataKey="date"
@@ -95,13 +122,16 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
             stroke="hsl(var(--border))"
             tickFormatter={(value) => `₩${(value / 10000).toFixed(0)}만`}
           />
-          <Tooltip content={<CustomTooltip />} wrapperStyle={{ pointerEvents: 'auto' }} />
+          {effectiveTooltip}
           <Line type="monotone" dataKey="price" stroke="hsl(var(--primary))" strokeWidth={2} dot={<CustomDot />} />
           {minPoint ? (
             <ReferenceDot x={minPoint.date} y={minPoint.price} r={8} fill="transparent" stroke="hsl(var(--destructive))" strokeWidth={2} />
           ) : null}
         </LineChart>
       </ResponsiveContainer>
+      <div className="mt-2 text-[10px] text-muted-foreground">
+        {lockedIndex != null ? '날짜 고정됨 · 차트를 다시 클릭하면 해제됩니다' : '차트를 클릭하면 해당 날짜로 고정됩니다'}
+      </div>
     </div>
   );
 };
