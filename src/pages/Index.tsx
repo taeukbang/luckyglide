@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+// 달력 제거: 출발/도착일 직접 입력으로 대체
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -77,6 +78,11 @@ const Index = () => {
   const [sortKey, setSortKey] = useState<string>(sortOptions[0].key);
   const [directOnly, setDirectOnly] = useState<boolean>(false);
   const [tripDaysSel, setTripDaysSel] = useState<string>(tripDayOptions[0]);
+  // 새 필터: 도시 검색어, 일정(출발일) 고정
+  const [cityQuery, setCityQuery] = useState<string>("");
+  const [fixedDepIso, setFixedDepIso] = useState<string | null>(null);
+  const [fixedRetIso, setFixedRetIso] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   
   useEffect(() => {
     const controller = new AbortController();
@@ -101,6 +107,8 @@ const Index = () => {
           const td = parseInt(tripDaysSel, 10);
           if (!Number.isNaN(td)) qs.set('tripDays', String(td));
         }
+        if (fixedDepIso) qs.set('dep', fixedDepIso);
+        if (fixedRetIso) qs.set('ret', fixedRetIso);
         const res = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -129,7 +137,7 @@ const Index = () => {
 
     progressiveLoad();
     return () => controller.abort();
-  }, [selectedContinent, directOnly, tripDaysSel]);
+  }, [selectedContinent, directOnly, tripDaysSel, fixedDepIso, fixedRetIso]);
 
   const filteredFlights = useMemo(() => {
     const regionSet = new Set<string>([selectedContinent]);
@@ -140,7 +148,12 @@ const Index = () => {
       return { ...it, price: priceNum, originalPrice: originalPriceNum } as LatestItem;
     });
     // 정렬
-    const sorted = [...normalized].sort((a, b) => {
+    // 도시 검색어 필터(한글 도시명 포함 부분 일치)
+    const byQuery = cityQuery.trim()
+      ? normalized.filter(it => it.city?.toLowerCase().includes(cityQuery.trim().toLowerCase()))
+      : normalized;
+
+    const sorted = [...byQuery].sort((a, b) => {
       if (sortKey === "discountDesc") {
         const aDiscount = (typeof a.price === 'number' && typeof a.originalPrice === 'number' && a.originalPrice > 0)
           ? Math.abs(100 - Math.round((Number(a.price) / Number(a.originalPrice)) * 100)) : -Infinity;
@@ -181,7 +194,7 @@ const Index = () => {
         collectedAt: it.collectedAt,
         });
       });
-  }, [items, selectedContinent, sortKey]);
+  }, [items, selectedContinent, sortKey, cityQuery]);
 
   useEffect(() => {
     if (!dialogOpen || !selectedFlight?.code) return;
@@ -363,49 +376,66 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex gap-3 flex-col sm:flex-row items-start sm:items-center">
-          <Select value={selectedContinent} onValueChange={setSelectedContinent}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="대륙 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {continents.map((continent) => (
-                <SelectItem key={continent} value={continent}>
-                  {continent}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={sortKey} onValueChange={setSortKey}>
-            <SelectTrigger className="w-full sm:w-[260px]">
-              <SelectValue placeholder="정렬" />
-            </SelectTrigger>
-            <SelectContent>
-              {sortOptions.map((o) => (
-                <SelectItem key={o.key} value={o.key}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={tripDaysSel} onValueChange={setTripDaysSel}>
-            <SelectTrigger className="w-full sm:w-[220px]">
-              <SelectValue placeholder="여정 길이" />
-            </SelectTrigger>
-            <SelectContent>
-              {tripDayOptions.map((o) => (
-                <SelectItem key={o} value={o}>{o}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <label className="flex items-center gap-2 select-none text-sm">
-            <Checkbox checked={directOnly} onCheckedChange={(v:any) => setDirectOnly(Boolean(v))} />
-            직항만 표시
-          </label>
+        {/* 1행: 도시 검색 + 고급 필터 토글 */}
+        <div className="mb-3 flex gap-2 items-center">
+          <Input className="w-full sm:w-[300px]" placeholder="도시명으로 검색" value={cityQuery} onChange={(e)=>setCityQuery(e.target.value)} />
+          <Button variant="outline" className="whitespace-nowrap" onClick={()=>setShowAdvanced(v=>!v)}>
+            {showAdvanced ? '검색 조건 접기' : '검색 조건 추가하기'}
+          </Button>
         </div>
+
+        {/* 2행: 고급 조건(정렬/여정 길이/일정/직항) */}
+        {showAdvanced && (
+        <div className="mb-4 space-y-3">
+          {/* 정렬 방식 */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <span className="w-full sm:w-20 text-sm text-muted-foreground">정렬 방식</span>
+            <Select value={sortKey} onValueChange={setSortKey}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="정렬 방식" />
+              </SelectTrigger>
+              <SelectContent>
+                {sortOptions.map((o) => (
+                  <SelectItem key={o.key} value={o.key}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 여정 길이 */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <span className="w-full sm:w-20 text-sm text-muted-foreground">여정 길이</span>
+            <Select value={tripDaysSel} onValueChange={setTripDaysSel}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="여정 길이" />
+              </SelectTrigger>
+              <SelectContent>
+                {tripDayOptions.map((o) => (
+                  <SelectItem key={o} value={o}>{o}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 여정 일정 */}
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-muted-foreground">여정 일정</span>
+            <div className="flex items-center gap-1 w-full">
+              <Input className="flex-1 min-w-[120px]" placeholder="출발일 YYYY-MM-DD" value={fixedDepIso ?? ''} onChange={(e)=>setFixedDepIso(e.target.value || null)} />
+              <span className="px-1 text-muted-foreground">~</span>
+              <Input className="flex-1 min-w-[120px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
+            </div>
+          </div>
+
+          {/* 직항 여부 */}
+          <div className="flex flex-row items-center gap-2">
+            <span className="w-20 text-sm text-muted-foreground">직항 여부</span>
+            <Checkbox checked={directOnly} onCheckedChange={(v:any) => setDirectOnly(Boolean(v))} />
+          </div>
+        </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredFlights.map((flight) => (
