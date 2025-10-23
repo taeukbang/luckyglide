@@ -95,7 +95,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
             stroke="hsl(var(--border))"
             tickFormatter={(value) => `₩${(value / 10000).toFixed(0)}만`}
           />
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip />} wrapperStyle={{ pointerEvents: 'auto' }} />
           <Line type="monotone" dataKey="price" stroke="hsl(var(--primary))" strokeWidth={2} dot={<CustomDot />} />
           {minPoint ? (
             <ReferenceDot x={minPoint.date} y={minPoint.price} r={8} fill="transparent" stroke="hsl(var(--destructive))" strokeWidth={2} />
