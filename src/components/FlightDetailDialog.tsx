@@ -187,12 +187,19 @@ export const FlightDetailDialog = ({
                   return acc;
                 }, {});
                 if (!best.date || !code) return "#";
-                // 2) MM/DD -> ISO (현재 연도) — TZ 안전 처리
+                // 2) MM/DD -> ISO (현재 연도 기준, 과거면 다음 해로 롤오버)
                 const now = new Date();
-                const yyyy = now.getUTCFullYear();
+                const yyyy = now.getFullYear();
                 const toIso = (mmdd: string) => {
                   const [mm, dd] = mmdd.split("/");
-                  return `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+                  const month = parseInt(mm, 10);
+                  const day = parseInt(dd, 10);
+                  let year = yyyy;
+                  const candidate = new Date(year, month - 1, day);
+                  if (candidate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+                    year += 1;
+                  }
+                  return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
                 };
                 const depIso = toIso(best.date);
                 // 3) 복귀일 = 출발일 + (tripDays-1) — UTC 기준 덧셈으로 변환 오프셋 방지
@@ -210,8 +217,18 @@ export const FlightDetailDialog = ({
                 }, {});
                 if (!best.date || !code) return;
                 const now = new Date();
-                const yyyy = now.getUTCFullYear();
-                const toIso = (mmdd: string) => { const [mm, dd] = mmdd.split("/"); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; };
+                const yyyy = now.getFullYear();
+                const toIso = (mmdd: string) => {
+                  const [mm, dd] = mmdd.split("/");
+                  const month = parseInt(mm, 10);
+                  const day = parseInt(dd, 10);
+                  let year = yyyy;
+                  const candidate = new Date(year, month - 1, day);
+                  if (candidate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+                    year += 1;
+                  }
+                  return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                };
                 const depIso = toIso(best.date);
                 const days = parseInt(tripDuration, 10) || 3;
                 const retIso = addDaysIsoKST(depIso, days - 1);

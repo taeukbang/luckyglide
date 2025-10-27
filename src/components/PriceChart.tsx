@@ -34,12 +34,18 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     const arr = new Date(dep);
     const len = Math.max(1, Number(tripDays) || 1);
     arr.setDate(arr.getDate() + (len - 1));
-    const yyyy = new Date().getFullYear();
+    // 현재 연도 기준으로, 과거 날짜면 다음 해로 롤오버
+    const today = new Date();
+    const yyyy = today.getFullYear();
     const toIso = (d: Date) => {
-      const y = yyyy;
+      let year = yyyy;
+      const candidate = new Date(year, d.getMonth(), d.getDate());
+      if (candidate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+        year += 1;
+      }
       const m = String(d.getMonth() + 1).padStart(2, "0");
       const da = String(d.getDate()).padStart(2, "0");
-      return `${y}-${m}-${da}`;
+      return `${year}-${m}-${da}`;
     };
     const depIso = toIso(dep);
     const retIso = addDaysIsoKST(depIso, len - 1);
