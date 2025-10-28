@@ -17,6 +17,7 @@ import { PriceChart } from "./PriceChart";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
 import { buildMrtBookingUrl, addDaysIsoKST } from "@/lib/utils";
+import { openPartnerOrFallback } from "@/lib/partner";
 import { gaEvent } from "@/lib/ga";
 import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@/lib/flags";
 
@@ -178,44 +179,17 @@ export const FlightDetailDialog = ({
             <Button variant="outline" className="hidden" onClick={onRefresh} disabled={!!refreshLoading}>
               {refreshLoading ? '새로고침 중…' : '새로고침'}
             </Button>
-            <a
-              className="flex-1"
-              href={(() => {
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={async (e)=>{
                 // 1) 최저가 날짜 선택
                 const best = (priceData || []).reduce<{date?: string; price?: number}>((acc, cur) => {
                   if (!acc.date || (typeof acc.price === 'number' ? cur.price < acc.price! : true)) return { date: cur.date, price: cur.price };
                   return acc;
                 }, {});
-                if (!best.date || !code) return "#";
-                // 2) MM/DD -> ISO (현재 연도 기준, 과거면 다음 해로 롤오버)
-                const now = new Date();
-                const yyyy = now.getFullYear();
-                const toIso = (mmdd: string) => {
-                  const [mm, dd] = mmdd.split("/");
-                  const month = parseInt(mm, 10);
-                  const day = parseInt(dd, 10);
-                  let year = yyyy;
-                  const candidate = new Date(year, month - 1, day);
-                  if (candidate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-                    year += 1;
-                  }
-                  return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-                };
-                const depIso = toIso(best.date);
-                // 3) 복귀일 = 출발일 + (tripDays-1) — UTC 기준 덧셈으로 변환 오프셋 방지
-                const days = parseInt(tripDuration, 10) || 3;
-                const retIso = addDaysIsoKST(depIso, days - 1);
-                return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso }, { nonstop: true });
-              })()}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e)=>{
-                // 동일 로직으로 dep/ret 추출해 이벤트 보냄
-                const best = (priceData || []).reduce<{date?: string; price?: number}>((acc, cur) => {
-                  if (!acc.date || (typeof acc.price === 'number' ? cur.price < acc.price! : true)) return { date: cur.date, price: cur.price };
-                  return acc;
-                }, {});
                 if (!best.date || !code) return;
+                // 2) MM/DD -> ISO (현재 연도 기준, 과거면 다음 해로 롤오버)
                 const now = new Date();
                 const yyyy = now.getFullYear();
                 const toIso = (mmdd: string) => {
@@ -232,11 +206,13 @@ export const FlightDetailDialog = ({
                 const depIso = toIso(best.date);
                 const days = parseInt(tripDuration, 10) || 3;
                 const retIso = addDaysIsoKST(depIso, days - 1);
+                const fallbackUrl = buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso }, { nonstop: true });
+                await openPartnerOrFallback({ from: "ICN", to: code, depdt: depIso, rtndt: retIso, nonstop: true, fallbackUrl });
                 gaEvent('click_detail', { code, city, depdt: depIso, rtndt: retIso, nonstop: true, price: best.price, tripDays: days });
               }}
             >
-              <Button className="w-full" size="lg">최저가 예약하기</Button>
-            </a>
+              최저가 예약하기
+            </Button>
             <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
               닫기
             </Button>

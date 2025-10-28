@@ -1,6 +1,7 @@
 import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl, codeToCountry } from "@/lib/flags";
 import { Card, CardContent } from "@/components/ui/card";
 import { buildMrtBookingUrl } from "@/lib/utils";
+import { openPartnerOrFallback } from "@/lib/partner";
 import { gaEvent } from "@/lib/ga";
 import { Button } from "@/components/ui/button";
 import { Sparkline } from "./Sparkline";
@@ -154,34 +155,20 @@ export const FlightCard = ({
             <Button size="sm" className="text-xs h-7 px-3 hidden" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
               {refreshLoading ? '새로고침 중…' : '새로고침'}
             </Button>
-            <a
-              href={(() => {
-                const [depIso, retIsoRaw] = travelDates.split("~");
-                // 링크는 카드에 표시된 스캔값(출발/복귀일)을 그대로 사용
-                const retIso = retIsoRaw?.trim() || depIso;
-                const url = buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso }, { nonstop: true });
-                return url;
-              })()}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(e)=>{
+            <Button
+              size="sm"
+              className="text-xs h-7 px-3"
+              onClick={async (e)=>{
+                e.stopPropagation();
                 const [depIso, retIsoRaw] = travelDates.split("~");
                 const retIso = retIsoRaw?.trim() || depIso;
-                gaEvent('click_card', {
-                  code: meta?.code,
-                  city,
-                  depdt: depIso,
-                  rtndt: retIso,
-                  nonstop: true,
-                  price: price ?? undefined,
-                  tripDays: meta?.tripDays,
-                });
+                const fallbackUrl = buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso }, { nonstop: true });
+                await openPartnerOrFallback({ from: "ICN", to: meta?.code ?? "", depdt: depIso, rtndt: retIso, nonstop: true, fallbackUrl });
+                gaEvent('click_card', { code: meta?.code, city, depdt: depIso, rtndt: retIso, nonstop: true, price: price ?? undefined, tripDays: meta?.tripDays });
               }}
             >
-              <Button size="sm" className="text-xs h-7 px-3">
-                예약
-              </Button>
-            </a>
+              예약
+            </Button>
             <Button size="sm" className="text-xs h-7 px-3 bg-green-100 text-green-700 hover:bg-green-200" variant="default" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
               가격 변동 확인
             </Button>

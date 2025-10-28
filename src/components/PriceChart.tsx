@@ -1,5 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot } from "recharts";
 import { buildMrtBookingUrl, addDaysIsoKST } from "@/lib/utils";
+import { openPartnerOrFallback } from "@/lib/partner";
 import { gaEvent } from "@/lib/ga";
 
 interface PriceChartProps {
@@ -59,17 +60,26 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
         <div style={{ color: "hsl(var(--foreground))", fontSize: 12, marginTop: 4 }}>가격: ₩{price.toLocaleString()}</div>
         {bookingUrl ? (
           <div style={{ marginTop: 8 }}>
-            <a href={bookingUrl} target="_blank" rel="noreferrer" onClick={()=>{
-              gaEvent('click_graph', { code: bookingToCode, city: bookingToNameKo, depdt: depIso, rtndt: retIso, nonstop: !!nonstop, price });
-            }} style={{
-              display: "inline-block",
-              fontSize: 12,
-              padding: "6px 10px",
-              borderRadius: 6,
-              background: "hsl(var(--primary))",
-              color: "hsl(var(--primary-foreground))",
-              textDecoration: "none"
-            }}>이 가격으로 예약하기</a>
+            <a
+              href={bookingUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={async (e)=>{
+                e.preventDefault();
+                const fallbackUrl = bookingUrl;
+                await openPartnerOrFallback({ from: bookingFromCode, to: bookingToCode!, depdt: depIso, rtndt: retIso, nonstop: !!nonstop, fallbackUrl });
+                gaEvent('click_graph', { code: bookingToCode, city: bookingToNameKo, depdt: depIso, rtndt: retIso, nonstop: !!nonstop, price });
+              }}
+              style={{
+                display: "inline-block",
+                fontSize: 12,
+                padding: "6px 10px",
+                borderRadius: 6,
+                background: "hsl(var(--primary))",
+                color: "hsl(var(--primary-foreground))",
+                textDecoration: "none"
+              }}
+            >이 가격으로 예약하기</a>
           </div>
         ) : null}
       </div>

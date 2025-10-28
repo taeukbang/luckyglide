@@ -9,7 +9,17 @@ function decodeExpFromJwt(token?: string | null) {
     const parts = token.split(".");
     if (parts.length < 2) return null;
     const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const payload = JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
+    const decode = (b64: string) => {
+      if (typeof atob === 'function') {
+        // Edge/Browser
+        const json = atob(b64);
+        return json;
+      }
+      // Node
+      // @ts-ignore Buffer may not exist on Edge runtime, guarded above
+      return Buffer.from(b64, "base64").toString("utf8");
+    };
+    const payload = JSON.parse(decode(base64));
     return typeof payload?.exp === "number" ? payload.exp : null; // seconds
   } catch {
     return null;

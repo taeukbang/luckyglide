@@ -1,18 +1,62 @@
 export const config = { runtime: "edge" };
 
 import { getPartnerAccessToken } from "../server/mrtPartnerAuth";
+import { buildMrtBookingUrl } from "../src/lib/utils";
 
 const BACKOFFICE = "https://api3-backoffice.myrealtrip.com";
 
 function toCityCode(iata: string) {
   const up = String(iata || "").toUpperCase();
+  // 광범위 매핑: IATA 공항코드 -> IATA 도시(메트로)코드
+  // 없는 경우 원본 반환
   const map: Record<string, string> = {
+    // KR
     ICN: "SEL", GMP: "SEL",
-    KIX: "OSA", ITM: "OSA",
+    PUS: "PUS", CJU: "CJU", TAE: "TAE", KWJ: "KWJ", CJJ: "CJJ", USN: "USN", RSU: "RSU",
+    // JP
     NRT: "TYO", HND: "TYO",
+    KIX: "OSA", ITM: "OSA",
+    CTS: "SPK", OKD: "SPK", FUK: "FUK", NGO: "NGO", KMQ: "KMQ", SDJ: "SDJ", KOJ: "KOJ", OKA: "OKA",
+    // CN (mainland)
+    PEK: "BJS", PKX: "BJS",
+    PVG: "SHA", SHA: "SHA",
+    CAN: "CAN", SZX: "SZX", HGH: "HGH", XMN: "XMN", CSX: "CSX",
+    // TW/HK/MO
+    TPE: "TPE", TSA: "TPE", KHH: "KHH",
+    HKG: "HKG", MFM: "MFM",
+    // US major metros
     JFK: "NYC", LGA: "NYC", EWR: "NYC",
+    IAD: "WAS", DCA: "WAS", BWI: "WAS",
+    ORD: "CHI", MDW: "CHI",
+    // LA/SF는 별도 메트로코드 관행이 약함 → 원본 유지(SFO/LAX 등)
+    // UK
     LHR: "LON", LGW: "LON", LTN: "LON", STN: "LON", LCY: "LON", SEN: "LON",
+    // FR
     CDG: "PAR", ORY: "PAR", BVA: "PAR",
+    // IT
+    FCO: "ROM", CIA: "ROM",
+    MXP: "MIL", LIN: "MIL", BGY: "MIL",
+    // ES
+    BCN: "BCN", MAD: "MAD",
+    // DE
+    BER: "BER", FRA: "FRA", MUC: "MUC",
+    // CA
+    YYZ: "YTO", YTZ: "YTO", YKZ: "YTO",
+    YUL: "YMQ", YMX: "YMQ",
+    YVR: "YVR",
+    // AU/NZ
+    SYD: "SYD", MEL: "MEL", AVV: "MEL", AKL: "AKL",
+    // BR/AR
+    GRU: "SAO", CGH: "SAO", VCP: "SAO",
+    GIG: "RIO", SDU: "RIO",
+    EZE: "BUE", AEP: "BUE",
+    // RU/TR/AE/SG/TH/VN
+    SVO: "MOW", DME: "MOW", VKO: "MOW",
+    IST: "IST", SAW: "IST",
+    DXB: "DXB", AUH: "AUH",
+    SIN: "SIN",
+    BKK: "BKK", DMK: "BKK", HKT: "HKT", CNX: "CNX",
+    SGN: "SGN", HAN: "HAN", DAD: "DAD", CXR: "CXR",
   };
   return map[up] || up;
 }
@@ -31,12 +75,38 @@ export default async function handler(req: Request): Promise<Response> {
     }
     if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-    const { from, to, depdt, rtndt, tripType = "RT" } = await req.json();
+    const { from, to, depdt, rtndt, tripType = "RT", nonstop } = await req.json();
     if (!from || !to || !depdt || !rtndt) return json({ error: "from, to, depdt, rtndt are required" }, 400);
 
     const token = await getPartnerAccessToken();
     const depCity = toCityCode(from);
     const arrCity = toCityCode(to);
+
+    // nonstop=true일 경우: 소비자용 검색 URL을 targetUrl로 직접 사용하여 mylink 생성
+    if (nonstop) {
+      const targetUrl = buildMrtBookingUrl(
+        { from, to, fromNameKo: "인천", toNameKo: arrCity, depdt, rtndt, adt: 1, chd: 0, inf: 0, cabin: "Y" },
+        { mobile: false, nonstop: true }
+      );
+      const r2 = await fetch(`${BACKOFFICE}/partner/v2/mylink`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "partner-access-token": token,
+          "origin": "https://partner.myrealtrip.com",
+        },
+        body: JSON.stringify({ targetUrl }),
+      });
+      if (!r2.ok) {
+        const t = await r2.text().catch(() => "");
+        return json({ error: "mylink request failed", status: r2.status, body: t, targetUrl }, 502);
+      }
+      const j2 = await r2.json().catch(() => ({}));
+      const mylink = j2?.data?.mylink;
+      const expirationMinutes = j2?.data?.expirationMinutes ?? null;
+      if (!mylink) return json({ error: "Invalid mylink response", body: j2, targetUrl }, 502);
+      return json({ mylink, gid: null, landingUrl: targetUrl, expirationMinutes, nonstop: true });
+    }
 
     const r1 = await fetch(`${BACKOFFICE}/flight/api/partner/shopping/fare/query-landing-url`, {
       method: "POST",
