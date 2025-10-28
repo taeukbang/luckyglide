@@ -3,6 +3,7 @@ export const config = { runtime: "nodejs" };
 import { getPartnerAccessToken } from "../server/mrtPartnerAuth.js";
 
 const BACKOFFICE = "https://api3-backoffice.myrealtrip.com";
+const DEFAULT_TIMEOUT_MS = Number(process.env.MRT_HTTP_TIMEOUT_MS ?? 8000);
 
 function toCityCode(iata: string) {
   const up = String(iata || "").toUpperCase();
@@ -73,6 +74,18 @@ function json(body: any, status = 200) {
   });
 }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit & { timeoutMs?: number } = {}) {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...rest } = init;
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort("timeout"), timeoutMs);
+  try {
+    const res = await fetch(input, { ...rest, signal: ac.signal });
+    return res;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 function buildConsumerBookingUrl(params: { from: string; fromNameKo?: string; to: string; toNameKo: string; depdt: string; rtndt: string; adt?: number; chd?: number; inf?: number; cabin?: string }, opts?: { mobile?: boolean; nonstop?: boolean }) {
   const { from, fromNameKo = "인천", to, toNameKo, depdt, rtndt, adt = 1, chd = 0, inf = 0, cabin = "Y" } = params;
   const base = opts?.mobile
@@ -132,7 +145,7 @@ export default async function handler(req: Request): Promise<Response> {
         { from, to, fromNameKo: "인천", toNameKo: arrCity, depdt, rtndt, adt: 1, chd: 0, inf: 0, cabin: "Y" },
         { mobile: useMobile, nonstop: true }
       );
-      const r2 = await fetch(`${BACKOFFICE}/partner/v2/mylink`, {
+      const r2 = await fetchWithTimeout(`${BACKOFFICE}/partner/v2/mylink`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -152,7 +165,7 @@ export default async function handler(req: Request): Promise<Response> {
       return json({ mylink, gid: null, landingUrl: targetUrl, expirationMinutes, nonstop: true });
     }
 
-    const r1 = await fetch(`${BACKOFFICE}/flight/api/partner/shopping/fare/query-landing-url`, {
+    const r1 = await fetchWithTimeout(`${BACKOFFICE}/flight/api/partner/shopping/fare/query-landing-url`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -166,7 +179,7 @@ export default async function handler(req: Request): Promise<Response> {
         arrDate: rtndt,
         tripTypeCd: tripType,
       }),
-    });
+  });
     if (!r1.ok) {
       const t = await r1.text().catch(() => "");
       return json({ error: "landing-url request failed", status: r1.status, body: t }, 502);
@@ -176,7 +189,7 @@ export default async function handler(req: Request): Promise<Response> {
     const gid = j1?.data?.gid;
     if (!landingUrl || !gid) return json({ error: "Invalid landing-url response", body: j1 }, 502);
 
-    const r2 = await fetch(`${BACKOFFICE}/partner/v2/mylink`, {
+  const r2 = await fetchWithTimeout(`${BACKOFFICE}/partner/v2/mylink`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -184,7 +197,7 @@ export default async function handler(req: Request): Promise<Response> {
         "origin": "https://partner.myrealtrip.com",
       },
       body: JSON.stringify({ targetUrl: landingUrl }),
-    });
+  });
     if (!r2.ok) {
       const t = await r2.text().catch(() => "");
       return json({ error: "mylink request failed", status: r2.status, body: t, gid, landingUrl }, 502);
