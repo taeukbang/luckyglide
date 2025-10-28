@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "server:dev": "tsx -r dotenv/config server/index.ts",
     "dev:all": "concurrently \"npm:server:dev\" \"npm:dev\"",
-    "test:partner": "tsx -r dotenv/config scripts/test-partner.ts"
+    "test:partner": "tsx -r dotenv/config scripts/test-partner.ts",
+    "test:partner:local": "tsx -r dotenv/config scripts/test-partner-local.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

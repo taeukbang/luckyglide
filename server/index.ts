@@ -5,6 +5,7 @@ import { scanAndStore } from "./scan";
 import { ENRICHED_DESTINATIONS as DESTINATIONS } from "./cities";
 import { supabase, hasSupabase } from "./supabase";
 import { fetchCalendar as fetchCal } from "./myrealtrip";
+import { createPartnerMylink } from "./mrtPartnerLink";
 
 const app = express();
 app.use(cors());
@@ -105,6 +106,18 @@ app.post("/api/scan-all", async (req, res) => {
 app.get("/api/destinations", (req, res) => {
   const regions = Array.from(new Set(DESTINATIONS.map((d) => d.region)));
   res.json({ regions, destinations: DESTINATIONS });
+});
+
+app.post("/api/mrt-partner-link", async (req, res) => {
+  try {
+    const { from, to, depdt, rtndt, tripType = "RT", nonstop, mobile } = req.body || {};
+    if (!from || !to || !depdt || !rtndt) return res.status(400).json({ error: "from, to, depdt, rtndt are required" });
+    const ua = String(req.headers["user-agent"] || "");
+    const r = await createPartnerMylink({ from, to, depdt, rtndt, tripType, nonstop, mobile }, ua);
+    res.json(r);
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message ?? "internal error" });
+  }
 });
 
 app.get("/api/latest", async (req, res) => {

@@ -1,7 +1,6 @@
-export const config = { runtime: "edge" };
+export const config = { runtime: "nodejs" };
 
-import { getPartnerAccessToken } from "../server/mrtPartnerAuth";
-import { buildMrtBookingUrl } from "../src/lib/utils";
+import { getPartnerAccessToken } from "../server/mrtPartnerAuth.js";
 
 const BACKOFFICE = "https://api3-backoffice.myrealtrip.com";
 
@@ -74,6 +73,42 @@ function json(body: any, status = 200) {
   });
 }
 
+function buildConsumerBookingUrl(params: { from: string; fromNameKo?: string; to: string; toNameKo: string; depdt: string; rtndt: string; adt?: number; chd?: number; inf?: number; cabin?: string }, opts?: { mobile?: boolean; nonstop?: boolean }) {
+  const { from, fromNameKo = "인천", to, toNameKo, depdt, rtndt, adt = 1, chd = 0, inf = 0, cabin = "Y" } = params;
+  const base = opts?.mobile
+    ? "https://flights.myrealtrip.com/air/b2c/AIR/MBL/AIRMBLSCH0100100010.k1"
+    : "https://flights.myrealtrip.com/air/b2c/AIR/INT/AIRINTSCH0100100010.k1";
+  const qs = new URLSearchParams();
+  const push = (k: string, v: string) => qs.append(k, v);
+  push("initform", "RT");
+  push("domintgubun", "I");
+  push("depctycd", from); push("depctycd", to); push("depctycd", ""); push("depctycd", "");
+  push("depctynm", fromNameKo); push("depctynm", toNameKo); push("depctynm", ""); push("depctynm", "");
+  push("arrctycd", to); push("arrctycd", from); push("arrctycd", ""); push("arrctycd", "");
+  push("arrctynm", toNameKo); push("arrctynm", fromNameKo); push("arrctynm", ""); push("arrctynm", "");
+  push("depdt", depdt); push("depdt", rtndt); push("depdt", ""); push("depdt", "");
+  push("opencase", "N"); push("opencase", "N"); push("opencase", "N");
+  push("openday", ""); push("openday", ""); push("openday", "");
+  push("depdomintgbn", "I");
+  push("secrchType", "FARE");
+  push("maxprice", "");
+  push("availcount", "250");
+  push("tasktype", "B2C");
+  push("adtcount", String(adt));
+  push("chdcount", String(chd));
+  push("infcount", String(inf));
+  push("cabinclass", cabin);
+  push("nonstop", opts?.nonstop ? "Y" : "");
+  push("freebag", "");
+  push("orgDepctycd", ""); push("orgDepctycd", ""); push("orgDepctycd", ""); push("orgDepctycd", "");
+  push("orgArrctycd", ""); push("orgArrctycd", ""); push("orgArrctycd", ""); push("orgArrctycd", "");
+  push("orgPreferaircd", "");
+  push("preferaircd", "");
+  const MRT_KSESID = "air:b2c:SELK138RB:SELK138RB::00";
+  push("KSESID", MRT_KSESID);
+  return `${base}?${qs.toString()}`;
+}
+
 export default async function handler(req: Request): Promise<Response> {
   try {
     if ((req as any).method && (req as any).method === "OPTIONS") {
@@ -93,7 +128,7 @@ export default async function handler(req: Request): Promise<Response> {
 
     // nonstop=true일 경우: 소비자용 검색 URL을 targetUrl로 직접 사용하여 mylink 생성
     if (nonstop) {
-      const targetUrl = buildMrtBookingUrl(
+      const targetUrl = buildConsumerBookingUrl(
         { from, to, fromNameKo: "인천", toNameKo: arrCity, depdt, rtndt, adt: 1, chd: 0, inf: 0, cabin: "Y" },
         { mobile: useMobile, nonstop: true }
       );
