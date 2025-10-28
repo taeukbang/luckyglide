@@ -28,7 +28,10 @@ function toCityCode(iata: string) {
     JFK: "NYC", LGA: "NYC", EWR: "NYC",
     IAD: "WAS", DCA: "WAS", BWI: "WAS",
     ORD: "CHI", MDW: "CHI",
-    // LA/SF는 별도 메트로코드 관행이 약함 → 원본 유지(SFO/LAX 등)
+    // US West
+    SFO: "SFO", OAK: "OAK", SJC: "SJC",
+    LAX: "LAX", LGB: "LGB", SNA: "SNA", ONT: "ONT", BUR: "BUR",
+    SEA: "SEA", PDX: "PDX", PHX: "PHX", LAS: "LAS",
     // UK
     LHR: "LON", LGW: "LON", LTN: "LON", STN: "LON", LCY: "LON", SEN: "LON",
     // FR
@@ -38,14 +41,17 @@ function toCityCode(iata: string) {
     MXP: "MIL", LIN: "MIL", BGY: "MIL",
     // ES
     BCN: "BCN", MAD: "MAD",
-    // DE
+    // DE/NL/BE/CH
     BER: "BER", FRA: "FRA", MUC: "MUC",
+    AMS: "AMS",
+    BRU: "BRU",
+    ZRH: "ZRH", GVA: "GVA",
     // CA
     YYZ: "YTO", YTZ: "YTO", YKZ: "YTO",
     YUL: "YMQ", YMX: "YMQ",
     YVR: "YVR",
     // AU/NZ
-    SYD: "SYD", MEL: "MEL", AVV: "MEL", AKL: "AKL",
+    SYD: "SYD", MEL: "MEL", AVV: "MEL", BNE: "BNE", PER: "PER", ADL: "ADL", AKL: "AKL", WLG: "WLG", CHC: "CHC",
     // BR/AR
     GRU: "SAO", CGH: "SAO", VCP: "SAO",
     GIG: "RIO", SDU: "RIO",
@@ -75,10 +81,13 @@ export default async function handler(req: Request): Promise<Response> {
     }
     if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-    const { from, to, depdt, rtndt, tripType = "RT", nonstop } = await req.json();
+    const { from, to, depdt, rtndt, tripType = "RT", nonstop, mobile } = await req.json();
     if (!from || !to || !depdt || !rtndt) return json({ error: "from, to, depdt, rtndt are required" }, 400);
 
     const token = await getPartnerAccessToken();
+    const ua = req.headers.get("user-agent") || "";
+    const uaMobile = /Android|iPhone|iPad|iPod|Mobile|SamsungBrowser/i.test(ua);
+    const useMobile = typeof mobile === 'boolean' ? mobile : uaMobile;
     const depCity = toCityCode(from);
     const arrCity = toCityCode(to);
 
@@ -86,7 +95,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (nonstop) {
       const targetUrl = buildMrtBookingUrl(
         { from, to, fromNameKo: "인천", toNameKo: arrCity, depdt, rtndt, adt: 1, chd: 0, inf: 0, cabin: "Y" },
-        { mobile: false, nonstop: true }
+        { mobile: useMobile, nonstop: true }
       );
       const r2 = await fetch(`${BACKOFFICE}/partner/v2/mylink`, {
         method: "POST",

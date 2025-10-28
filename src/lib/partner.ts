@@ -1,9 +1,12 @@
-export async function getMrtPartnerMylink(params: { from: string; to: string; depdt: string; rtndt: string; nonstop?: boolean }) {
+import { isMobileUA } from "@/lib/utils";
+
+export async function getMrtPartnerMylink(params: { from: string; to: string; depdt: string; rtndt: string; nonstop?: boolean; mobile?: boolean }) {
   try {
+    const mobile = typeof params.mobile === 'boolean' ? params.mobile : isMobileUA();
     const res = await fetch("/api/mrt-partner-link", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(params),
+      body: JSON.stringify({ ...params, mobile }),
     });
     if (!res.ok) return null;
     const data = await res.json().catch(() => null as any);
@@ -14,7 +17,7 @@ export async function getMrtPartnerMylink(params: { from: string; to: string; de
   }
 }
 
-export async function openPartnerOrFallback(args: { from: string; to: string; depdt: string; rtndt: string; nonstop?: boolean; fallbackUrl: string }) {
+export async function openPartnerOrFallback(args: { from: string; to: string; depdt: string; rtndt: string; nonstop?: boolean; fallbackUrl: string; mobile?: boolean }) {
   const { from, to, depdt, rtndt, nonstop, fallbackUrl } = args;
   const win = window.open('about:blank', '_blank', 'noopener,noreferrer');
   try {
