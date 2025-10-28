@@ -19,6 +19,7 @@ interface FlightCardProps {
     code?: string;
     tripDays?: number;
   };
+  nonstop?: boolean;
   onClick: () => void;
   onShowChart?: () => void;
   onRefresh?: () => void;
@@ -41,6 +42,7 @@ export const FlightCard = ({
   onRefresh,
   refreshLoading,
   justRefreshed,
+  nonstop,
 }: FlightCardProps) => {
   const [openSpark, setOpenSpark] = useState(false);
   const [sparkData, setSparkData] = useState<{ date: string; price: number }[]>([]);
@@ -159,7 +161,7 @@ export const FlightCard = ({
                 const [depIso, retIsoRaw] = travelDates.split("~");
                 // 링크는 카드에 표시된 스캔값(출발/복귀일)을 그대로 사용
                 const retIso = retIsoRaw?.trim() || depIso;
-                const url = buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso }, { nonstop: true });
+                const url = buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso }, { nonstop: Boolean(nonstop) });
                 return url;
               })()}
               target="_blank"
@@ -172,7 +174,7 @@ export const FlightCard = ({
                   city,
                   depdt: depIso,
                   rtndt: retIso,
-                  nonstop: true,
+                  nonstop: Boolean(nonstop),
                   price: price ?? undefined,
                   tripDays: meta?.tripDays,
                 });

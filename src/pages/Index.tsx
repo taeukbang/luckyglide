@@ -473,6 +473,7 @@ const Index = () => {
               travelDates={flight.travelDates}
               collectedAt={(flight as any).collectedAt}
               meta={flight.meta}
+              nonstop={directOnly}
               onClick={() => handleFlightClick(flight)}
               onShowChart={() => handleFlightClick(flight)}
               // 새로고침 기능은 유지하되 UI는 숨김 처리됨
@@ -512,6 +513,7 @@ const Index = () => {
           onRefresh={() => handleRefresh(selectedFlight.code)}
           refreshLoading={refreshingCodes.has(selectedFlight.code)}
           justRefreshed={justRefreshedCodes.has(selectedFlight.code)}
+          nonstop={directOnly}
         />
       )}
     </div>

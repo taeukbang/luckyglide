@@ -37,6 +37,7 @@ interface FlightDetailDialogProps {
   onRefresh?: () => void;
   refreshLoading?: boolean;
   justRefreshed?: boolean;
+  nonstop?: boolean;
 }
 
 export const FlightDetailDialog = ({
@@ -53,6 +54,7 @@ export const FlightDetailDialog = ({
   onRefresh,
   refreshLoading,
   justRefreshed,
+  nonstop,
 }: FlightDetailDialogProps) => {
   const [tripDuration, setTripDuration] = useState(String(tripDays));
   // 부모 tripDays가 바뀌면 내부 선택값도 동기화 (카드의 여행일수 반영)
@@ -169,7 +171,7 @@ export const FlightDetailDialog = ({
               bookingFromCode="ICN"
               bookingToCode={code}
               bookingToNameKo={city}
-              nonstop
+              nonstop={!!nonstop}
             />
           </div>
 
@@ -205,7 +207,7 @@ export const FlightDetailDialog = ({
                 // 3) 복귀일 = 출발일 + (tripDays-1) — UTC 기준 덧셈으로 변환 오프셋 방지
                 const days = parseInt(tripDuration, 10) || 3;
                 const retIso = addDaysIsoKST(depIso, days - 1);
-                return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso }, { nonstop: true });
+                return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso }, { nonstop: Boolean(nonstop) });
               })()}
               target="_blank"
               rel="noreferrer"
@@ -232,7 +234,7 @@ export const FlightDetailDialog = ({
                 const depIso = toIso(best.date);
                 const days = parseInt(tripDuration, 10) || 3;
                 const retIso = addDaysIsoKST(depIso, days - 1);
-                gaEvent('click_detail', { code, city, depdt: depIso, rtndt: retIso, nonstop: true, price: best.price, tripDays: days });
+                gaEvent('click_detail', { code, city, depdt: depIso, rtndt: retIso, nonstop: Boolean(nonstop), price: best.price, tripDays: days });
               }}
             >
               <Button className="w-full" size="lg">최저가 예약하기</Button>
