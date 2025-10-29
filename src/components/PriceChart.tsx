@@ -17,15 +17,15 @@ interface PriceChartProps {
 
 export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToCode, bookingToNameKo, nonstop }: PriceChartProps) => {
   const [locked, setLocked] = useState(false);
-  const [lockedTooltip, setLockedTooltip] = useState<{
+  const [lockedPoint, setLockedPoint] = useState<{
     label: string;
-    payload: any[];
+    price: number;
     x: number;
     y: number;
   } | null>(null);
   const lastHoverRef = useRef<{
     label: string;
-    payload: any[];
+    price: number;
     x: number;
     y: number;
   } | null>(null);
@@ -42,9 +42,12 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (!active || !payload || !payload.length) return null;
-    const price = Number(payload[0]?.value);
-    const dep = parseMMDD(label);
+    const effectiveActive = locked ? true : active;
+    const effectiveLabel = locked && lockedPoint ? lockedPoint.label : label;
+    const effectivePrice = locked && lockedPoint ? Number(lockedPoint.price) : Number(payload?.[0]?.value);
+    if (!effectiveActive || !effectiveLabel || Number.isNaN(effectivePrice)) return null;
+    const price = effectivePrice;
+    const dep = parseMMDD(String(effectiveLabel));
     const arr = new Date(dep);
     const len = Math.max(1, Number(tripDays) || 1);
     arr.setDate(arr.getDate() + (len - 1));
@@ -110,12 +113,14 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
           data={data}
           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
           onMouseMove={(state: any) => {
-            if (!state) return;
+            if (!state || locked) return;
             const { activeLabel, activePayload, chartX, chartY } = state;
-            if (!activeLabel || !activePayload) return;
+            if (!activeLabel || !activePayload || !activePayload.length) return;
+            const price = Number(activePayload[0]?.value);
+            if (Number.isNaN(price)) return;
             lastHoverRef.current = {
               label: String(activeLabel),
-              payload: activePayload,
+              price,
               x: chartX,
               y: chartY,
             };
@@ -123,12 +128,12 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
           onClick={() => {
             if (!locked) {
               if (lastHoverRef.current) {
-                setLockedTooltip(lastHoverRef.current);
+                setLockedPoint(lastHoverRef.current);
                 setLocked(true);
               }
             } else {
               setLocked(false);
-              setLockedTooltip(null);
+              setLockedPoint(null);
             }
           }}
           onMouseLeave={() => {
@@ -154,12 +159,11 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
             wrapperStyle={{ pointerEvents: 'auto' }}
             allowEscapeViewBox={{ x: true, y: true }}
             isAnimationActive={false}
-            {...(locked && lockedTooltip
+            {...(locked && lockedPoint
               ? {
                   active: true as any,
-                  payload: lockedTooltip.payload as any,
-                  label: lockedTooltip.label as any,
-                  position: { x: lockedTooltip.x, y: lockedTooltip.y } as any,
+                  label: lockedPoint.label as any,
+                  position: { x: lockedPoint.x, y: lockedPoint.y } as any,
                 }
               : {})}
           />
