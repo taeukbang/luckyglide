@@ -1,4 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot } from "recharts";
+import { useRef, useState } from "react";
 import { buildMrtBookingUrl, addDaysIsoKST } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
 
@@ -15,6 +16,19 @@ interface PriceChartProps {
 }
 
 export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToCode, bookingToNameKo, nonstop }: PriceChartProps) => {
+  const [locked, setLocked] = useState(false);
+  const [lockedTooltip, setLockedTooltip] = useState<{
+    label: string;
+    payload: any[];
+    x: number;
+    y: number;
+  } | null>(null);
+  const lastHoverRef = useRef<{
+    label: string;
+    payload: any[];
+    x: number;
+    y: number;
+  } | null>(null);
   const toMMDD = (d: Date) => {
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const da = String(d.getDate()).padStart(2, "0");
@@ -92,7 +106,38 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
   return (
     <div className="w-full h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        <LineChart
+          data={data}
+          margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+          onMouseMove={(state: any) => {
+            if (!state) return;
+            const { activeLabel, activePayload, chartX, chartY } = state;
+            if (!activeLabel || !activePayload) return;
+            lastHoverRef.current = {
+              label: String(activeLabel),
+              payload: activePayload,
+              x: chartX,
+              y: chartY,
+            };
+          }}
+          onClick={() => {
+            if (!locked) {
+              if (lastHoverRef.current) {
+                setLockedTooltip(lastHoverRef.current);
+                setLocked(true);
+              }
+            } else {
+              setLocked(false);
+              setLockedTooltip(null);
+            }
+          }}
+          onMouseLeave={() => {
+            if (!locked) {
+              lastHoverRef.current = null;
+            }
+          }}
+          style={{ cursor: locked ? "default" : "crosshair" }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           <XAxis
             dataKey="date"
@@ -104,7 +149,20 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
             stroke="hsl(var(--border))"
             tickFormatter={(value) => `₩${(value / 10000).toFixed(0)}만`}
           />
-          <Tooltip content={<CustomTooltip />} wrapperStyle={{ pointerEvents: 'auto' }} />
+          <Tooltip
+            content={<CustomTooltip />}
+            wrapperStyle={{ pointerEvents: 'auto' }}
+            allowEscapeViewBox={{ x: true, y: true }}
+            isAnimationActive={false}
+            {...(locked && lockedTooltip
+              ? {
+                  active: true as any,
+                  payload: lockedTooltip.payload as any,
+                  label: lockedTooltip.label as any,
+                  position: { x: lockedTooltip.x, y: lockedTooltip.y } as any,
+                }
+              : {})}
+          />
           <Line type="monotone" dataKey="price" stroke="hsl(var(--primary))" strokeWidth={2} dot={<CustomDot />} />
           {minPoint ? (
             <ReferenceDot x={minPoint.date} y={minPoint.price} r={8} fill="transparent" stroke="hsl(var(--destructive))" strokeWidth={2} />
