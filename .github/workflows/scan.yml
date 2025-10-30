@@ -45,7 +45,7 @@ jobs:
           SCAN_DAYS: 180
           SCAN_MIN_DAYS: 3
           SCAN_MAX_DAYS: 7
-          SCAN_CONCURRENCY: 4
+          SCAN_CONCURRENCY: 16
           SCAN_TRANSFER: -1
 
   direct:
@@ -66,7 +66,7 @@ jobs:
           SCAN_DAYS: 180
           SCAN_MIN_DAYS: 3
           SCAN_MAX_DAYS: 7
-          SCAN_CONCURRENCY: 4
+          SCAN_CONCURRENCY: 16
           SCAN_TRANSFER: 0
 
   manual:

@@ -27,5 +27,5 @@ jobs:
         run: npm ci
 
       - name: Run full scan (180 days)
-        run: SCAN_DAYS=180 npx tsx scripts/scan-all.ts
+        run: SCAN_DAYS=180 SCAN_CONCURRENCY=16 npx tsx scripts/scan-all.ts
 
