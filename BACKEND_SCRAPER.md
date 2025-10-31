@@ -14,7 +14,7 @@
 
 ### 실시간 카드 엔드포인트
 
-`GET /api/latest-live?from=ICN&region=아시아&codes=FUK,TYO&days=14&minTripDays=3&maxTripDays=7&concurrency=4`
+`GET /api/latest-live?from=ICN&region=아시아&codes=FUK,TYO&days=14&minTripDays=3&maxTripDays=7&concurrency=16`
 
 - 각 목적지에 대해 출발일(+14일) × 체류(3~7일) 범위를 스캔하여 창 내 최저가를 계산
 - 응답: `{ code, city, region, price, originalPrice(관측 최고값), departureDate, returnDate, airline, tripDays }`

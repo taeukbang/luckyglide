@@ -288,7 +288,7 @@ app.get("/api/latest-live", async (req, res) => {
     const days = Number(req.query.days ?? 30);
     const minTripDays = Number(req.query.minTripDays ?? 3);
     const maxTripDays = Number(req.query.maxTripDays ?? 7);
-    const concurrency = Math.max(1, Number(req.query.concurrency ?? 4));
+    const concurrency = Math.max(1, Number(req.query.concurrency ?? 16));
 
     let targets = DESTINATIONS;
     if (region && region !== "모두") {

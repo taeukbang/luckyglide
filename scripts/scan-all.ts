@@ -44,7 +44,7 @@ async function main() {
   const days = Number(process.env.SCAN_DAYS || 30);
   const minTripDays = Number(process.env.SCAN_MIN_DAYS || 3);
   const maxTripDays = Number(process.env.SCAN_MAX_DAYS || 7);
-  const concurrency = Math.max(1, Number(process.env.SCAN_CONCURRENCY || 4));
+  const concurrency = Math.max(1, Number(process.env.SCAN_CONCURRENCY || 16));
   const transfer = (process.env.SCAN_TRANSFER !== undefined && process.env.SCAN_TRANSFER !== null)
     ? Number(process.env.SCAN_TRANSFER)
     : -1;
