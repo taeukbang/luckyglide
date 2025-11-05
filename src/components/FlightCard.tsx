@@ -82,7 +82,7 @@ export const FlightCard = ({
   };
   return (
     <Card 
-      className={`group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${justRefreshed ? 'lg-flash-outline' : ''}`}
+      className={`group cursor-pointer transition-all duration-200 hover:shadow-md border-gray-200 ${justRefreshed ? 'lg-flash-outline' : ''}`}
       onClick={onClick}
     >
       <CardContent className="p-3">
@@ -112,35 +112,33 @@ export const FlightCard = ({
               })()}
             </div>
             <div className="min-w-0">
-              <h3 className="text-base font-bold text-foreground truncate">{city}</h3>
+              <h3 className="text-base font-semibold text-gray-900 truncate">{city}</h3>
               {(() => {
                 const resolvedName = country || (meta?.code ? codeToCountry[meta.code]?.countryKo : undefined) || "";
                 return (
-                  <p className="text-xs text-muted-foreground truncate">{resolvedName}</p>
+                  <p className="text-xs text-gray-500 truncate">{resolvedName}</p>
                 );
               })()}
             </div>
           </div>
           
           <div className="flex flex-col items-end flex-shrink-0">
-            <div className="relative">
-              {meta && (meta as any).isGood ? (
-                <div className="absolute -top-1 -right-1 z-10">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-md animate-pulse-slow">
-                    🔥 초특가
-                  </span>
-                </div>
-              ) : null}
-              <div className="text-2xl font-bold text-primary leading-tight">
-                {typeof price === 'number' ? `₩${price.toLocaleString()}` : '가격 정보 없음.'}
+            <div className="flex items-baseline gap-2">
+              <div className="text-2xl font-bold text-gray-900 leading-tight">
+                {typeof price === 'number' ? `${price.toLocaleString()}` : '가격 정보 없음.'}
               </div>
-              <div className="text-xs text-muted-foreground leading-tight">~부터</div>
+              <span className="text-sm text-gray-500">원</span>
             </div>
-            <span className="text-xs text-muted-foreground leading-tight mt-1">
+            {meta && (meta as any).isGood ? (
+              <span className="text-xs font-semibold text-red-500 mt-0.5">
+                특가
+              </span>
+            ) : null}
+            <span className="text-xs text-gray-500 leading-tight mt-1">
               ({travelDates}{meta?.tripDays ? `, ${meta.tripDays}일` : ""})
             </span>
             {formatCollected(collectedAt) ? (
-              <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">수집 {formatCollected(collectedAt)}</span>
+              <span className="text-[10px] text-gray-400 leading-tight mt-0.5">수집 {formatCollected(collectedAt)}</span>
             ) : null}
           </div>
         </div>
@@ -150,10 +148,10 @@ export const FlightCard = ({
             <Button
               size="sm"
               variant="ghost"
-              className="text-xs h-7 px-2 bg-blue-100 text-blue-700 hover:bg-blue-200"
+              className="text-xs h-7 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               onClick={(e)=>{ e.stopPropagation(); setOpenSpark(v=>!v); }}
             >
-              {openSpark ? '그래프 닫기' : '⬇️ 그래프 보기'}
+              {openSpark ? '그래프 닫기' : '그래프 보기'}
             </Button>
           </div>
           <div className="flex items-center gap-2">
@@ -185,12 +183,12 @@ export const FlightCard = ({
                 });
               }}
             >
-              <Button size="sm" className="text-xs h-7 px-3">
-                예약
+              <Button size="sm" className="text-xs h-7 px-3 bg-gray-900 hover:bg-gray-800 text-white">
+                예약하기
               </Button>
             </a>
-            <Button size="sm" className="text-xs h-7 px-3 bg-green-100 text-green-700 hover:bg-green-200" variant="default" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
-              가격 변동 확인
+            <Button size="sm" className="text-xs h-7 px-3 text-gray-600 hover:bg-gray-100" variant="ghost" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
+              가격 변동
             </Button>
           </div>
         </div>

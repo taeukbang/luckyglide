@@ -384,7 +384,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
       <HeroSection onContinentClick={(continent) => setSelectedContinent(continent)} />
 
@@ -425,9 +425,9 @@ const Index = () => {
 
               {/* 정렬 */}
               <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">정렬:</span>
+                <span className="text-sm text-gray-600">정렬:</span>
                 <Select value={sortKey} onValueChange={setSortKey}>
-                  <SelectTrigger className="w-[200px]">
+                  <SelectTrigger className="w-[200px] border-gray-200">
                     <SelectValue placeholder="정렬 방식" />
                   </SelectTrigger>
                   <SelectContent>
@@ -438,14 +438,14 @@ const Index = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <span className="text-sm text-muted-foreground ml-auto">
+                <span className="text-sm text-gray-500 ml-auto">
                   {filteredFlights.length}개 항공권
                 </span>
               </div>
 
               {/* 모바일 필터 - 모바일에서만 표시 */}
               {showAdvanced && (
-                <div className="lg:hidden p-4 border rounded-lg bg-card space-y-4">
+                <div className="lg:hidden p-4 border border-gray-200 rounded-lg bg-white space-y-4">
                   <FilterSidebar
                     regions={continents}
                     selectedRegion={selectedContinent}

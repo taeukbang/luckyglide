@@ -25,10 +25,10 @@ export function FilterSidebar({
   tripDayOptions,
 }: FilterSidebarProps) {
   return (
-    <aside className="w-64 flex-shrink-0 sticky top-4 h-fit bg-card rounded-lg border border-border p-4 space-y-6">
+    <aside className="w-64 flex-shrink-0 sticky top-4 h-fit bg-white rounded-lg border border-gray-200 p-4 space-y-6">
       {/* 지역 필터 */}
       <div>
-        <h3 className="font-semibold text-sm mb-3 text-foreground">지역</h3>
+        <h3 className="font-semibold text-sm mb-3 text-gray-900">지역</h3>
         <RadioGroup value={selectedRegion} onValueChange={onRegionChange}>
           {regions.map((region) => (
             <div key={region} className="flex items-center space-x-2 mb-2">
@@ -48,7 +48,7 @@ export function FilterSidebar({
 
       {/* 직항 여부 */}
       <div>
-        <h3 className="font-semibold text-sm mb-3 text-foreground">항공편</h3>
+        <h3 className="font-semibold text-sm mb-3 text-gray-900">항공편</h3>
         <div className="flex items-center space-x-2">
           <Checkbox
             id="direct-only"
@@ -65,7 +65,7 @@ export function FilterSidebar({
 
       {/* 여정 길이 */}
       <div>
-        <h3 className="font-semibold text-sm mb-3 text-foreground">여정 길이</h3>
+        <h3 className="font-semibold text-sm mb-3 text-gray-900">여정 길이</h3>
         <RadioGroup value={tripDays} onValueChange={onTripDaysChange}>
           {tripDayOptions.map((option) => (
             <div key={option} className="flex items-center space-x-2 mb-2">
