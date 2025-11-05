@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 // 달력 제거: 출발/도착일 직접 입력으로 대체
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 type LatestItem = {
   code: string;
