@@ -29,7 +29,7 @@ export function HeroSection({ onContinentClick }: HeroSectionProps) {
           
           {/* 인기 지역 - 미니멀 칩 */}
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm text-gray-500">인기 지역</span>
+            <span className="text-sm text-gray-500">지역</span>
             {popularRegions.map((region) => (
               <button
                 key={region.name}

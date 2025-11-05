@@ -397,8 +397,6 @@ const Index = () => {
               regions={continents}
               selectedRegion={selectedContinent}
               onRegionChange={setSelectedContinent}
-              directOnly={directOnly}
-              onDirectChange={setDirectOnly}
               tripDays={tripDaysSel}
               onTripDaysChange={setTripDaysSel}
               tripDayOptions={tripDayOptions}
@@ -421,6 +419,18 @@ const Index = () => {
                 <Button variant="outline" className="lg:hidden whitespace-nowrap" onClick={()=>setShowAdvanced(v=>!v)}>
                   {showAdvanced ? '필터 닫기' : '필터 열기'}
                 </Button>
+              </div>
+
+              {/* 직항만 보기 - 항상 표시 */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="direct-only-main"
+                  checked={directOnly}
+                  onCheckedChange={(checked) => setDirectOnly(Boolean(checked))}
+                />
+                <Label htmlFor="direct-only-main" className="text-sm cursor-pointer text-gray-700">
+                  직항만 보기
+                </Label>
               </div>
 
               {/* 정렬 */}
@@ -450,16 +460,15 @@ const Index = () => {
                     regions={continents}
                     selectedRegion={selectedContinent}
                     onRegionChange={setSelectedContinent}
-                    directOnly={directOnly}
-                    onDirectChange={setDirectOnly}
                     tripDays={tripDaysSel}
                     onTripDaysChange={setTripDaysSel}
                     tripDayOptions={tripDayOptions}
+                    isMobile={true}
                   />
                   
                   {/* 고급 날짜 필터 */}
-                  <div className="pt-4 border-t">
-                    <h3 className="font-semibold text-sm mb-3">여정 일정 (선택)</h3>
+                  <div className="pt-4 border-t border-gray-200">
+                    <h3 className="font-semibold text-sm mb-3 text-gray-900">여정 일정 (선택)</h3>
                     <div className="flex flex-col gap-2">
                       <Input 
                         placeholder="출발일 YYYY-MM-DD" 

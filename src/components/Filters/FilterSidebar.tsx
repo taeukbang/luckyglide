@@ -7,77 +7,62 @@ interface FilterSidebarProps {
   regions: string[];
   selectedRegion: string;
   onRegionChange: (region: string) => void;
-  directOnly: boolean;
-  onDirectChange: (direct: boolean) => void;
   tripDays: string;
   onTripDaysChange: (days: string) => void;
   tripDayOptions: string[];
+  isMobile?: boolean;
 }
 
 export function FilterSidebar({
   regions,
   selectedRegion,
   onRegionChange,
-  directOnly,
-  onDirectChange,
   tripDays,
   onTripDaysChange,
   tripDayOptions,
+  isMobile = false,
 }: FilterSidebarProps) {
   return (
-    <aside className="w-64 flex-shrink-0 sticky top-4 h-fit bg-white rounded-lg border border-gray-200 p-4 space-y-6">
+    <aside className={isMobile ? "" : "w-64 flex-shrink-0 sticky top-4 h-fit bg-white rounded-lg border border-gray-200 p-4 space-y-6"}>
       {/* 지역 필터 */}
       <div>
         <h3 className="font-semibold text-sm mb-3 text-gray-900">지역</h3>
         <RadioGroup value={selectedRegion} onValueChange={onRegionChange}>
-          {regions.map((region) => (
-            <div key={region} className="flex items-center space-x-2 mb-2">
-              <RadioGroupItem value={region} id={`region-${region}`} />
-              <Label
-                htmlFor={`region-${region}`}
-                className="text-sm cursor-pointer flex-1"
-              >
-                {region}
-              </Label>
-            </div>
-          ))}
+          <div className={isMobile ? "grid grid-cols-3 gap-2" : ""}>
+            {regions.map((region) => (
+              <div key={region} className={`flex items-center space-x-2 ${isMobile ? "" : "mb-2"}`}>
+                <RadioGroupItem value={region} id={`region-${isMobile ? "mobile-" : ""}${region}`} />
+                <Label
+                  htmlFor={`region-${isMobile ? "mobile-" : ""}${region}`}
+                  className="text-sm cursor-pointer flex-1"
+                >
+                  {region}
+                </Label>
+              </div>
+            ))}
+          </div>
         </RadioGroup>
       </div>
 
-      <Separator />
-
-      {/* 직항 여부 */}
-      <div>
-        <h3 className="font-semibold text-sm mb-3 text-gray-900">항공편</h3>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="direct-only"
-            checked={directOnly}
-            onCheckedChange={(checked) => onDirectChange(Boolean(checked))}
-          />
-          <Label htmlFor="direct-only" className="text-sm cursor-pointer">
-            직항만 보기
-          </Label>
-        </div>
-      </div>
-
-      <Separator />
+      {!isMobile && <Separator />}
 
       {/* 여정 길이 */}
-      <div>
+      <div className={isMobile ? "pt-4 border-t border-gray-200" : ""}>
         <h3 className="font-semibold text-sm mb-3 text-gray-900">여정 길이</h3>
         <RadioGroup value={tripDays} onValueChange={onTripDaysChange}>
-          {tripDayOptions.map((option) => (
-            <div key={option} className="flex items-center space-x-2 mb-2">
-              <RadioGroupItem value={option} id={`trip-${option}`} />
-              <Label
-                htmlFor={`trip-${option}`}
-                className="text-sm cursor-pointer flex-1"
-              >
-                {option}
-              </Label>
-            </div>
-          ))}
+          <div className={isMobile ? "grid grid-cols-2 gap-2" : ""}>
+            {tripDayOptions.map((option) => (
+              <div key={option} className={`flex items-center space-x-2 ${isMobile ? "" : "mb-2"}`}>
+                <RadioGroupItem value={option} id={`trip-${isMobile ? "mobile-" : ""}${option}`} />
+                <Label
+                  htmlFor={`trip-${isMobile ? "mobile-" : ""}${option}`}
+                  className="text-sm cursor-pointer flex-1"
+                >
+                  {option}
+                </Label>
+              </div>
+            ))}
+          </div>
         </RadioGroup>
       </div>
     </aside>
