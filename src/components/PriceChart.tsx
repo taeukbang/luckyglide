@@ -257,14 +257,14 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
             })();
             const shade = "#ef4444"; // red-500
             const shadeOpacity = 0.08;
-            const lineOpacity = 0.45;
+            const lineOpacity = shadeOpacity; // match perceived color
             return (
               <>
                 {/* Always shade (even single-day) */}
                 <ReferenceArea key={`area-${idx}`} x1={h.startMMDD} x2={h.endMMDD} fill={shade} fillOpacity={shadeOpacity} ifOverflow="extendDomain" />
                 {/* Extra vertical line for single-day to increase visibility */}
                 {span <= 1 && !isWeekendOnly ? (
-                  <ReferenceLine key={`line-${idx}`} x={h.startMMDD} stroke={shade} strokeOpacity={lineOpacity} />
+                  <ReferenceLine key={`line-${idx}`} x={h.startMMDD} stroke={shade} strokeOpacity={lineOpacity} strokeWidth={2} />
                 ) : null}
                 {!isWeekendOnly ? (
                   <ReferenceLine key={`label-${idx}`} x={mid} strokeOpacity={0} label={{ value: h.label, position: "insideTop", dy, fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />

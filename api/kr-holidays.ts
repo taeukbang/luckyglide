@@ -56,9 +56,23 @@ export default async function handler(req: Request): Promise<Response> {
     const flush = () => {
       if (!curStart || !curEnd) return;
       const joined = labels.join(" ");
-      let label = labels.length > 1 ? "연휴" : (labels[0] || "공휴일");
-      if (/설/.test(joined)) label = "설 연휴";
-      if (/추석/.test(joined)) label = "추석 연휴";
+      // Label building rules
+      let label: string;
+      const hasSubstitute = labels.some((l) => /대체/.test(l));
+      if (labels.length === 1) {
+        label = labels[0] || "공휴일";
+      } else if (hasSubstitute) {
+        const base = labels.find((l) => !/대체/.test(l)) || "대체휴일";
+        // normalize base like "삼일절" → "삼일절", leave as is
+        label = `${base.replace(/\s*대체.*$/, "").trim()} 대체휴일`;
+      } else if (/설/.test(joined)) {
+        label = "설 연휴";
+      } else if (/추석/.test(joined)) {
+        label = "추석 연휴";
+      } else {
+        // default: first holiday name
+        label = labels[0] || "공휴일";
+      }
       ranges.push({ startIso: toISO(curStart), endIso: toISO(curEnd), label });
       curStart = curEnd = null;
       labels = [];
