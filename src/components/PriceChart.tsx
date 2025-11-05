@@ -1,5 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceArea, ReferenceLine } from "recharts";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buildMrtBookingUrl, addDaysIsoKST } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
 import { buildHolidayRangesForDomain, HolidayRangeIso } from "@/lib/holidays";
@@ -44,23 +44,21 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
 
   // ---- Holidays (background shading) ----
   const domainMMDD = Array.isArray(data) ? data.map((d) => String(d.date)) : [];
-  // infer visible years roughly: current year and possibly next year (graph commonly spans year boundary)
-  const today = new Date();
-  const years = [today.getFullYear(), today.getFullYear() + 1];
-  let customRanges: HolidayRangeIso[] = [];
-  // try to pull from public/kr-holidays.json (non-blocking; best-effort)
-  try {
-    // @ts-ignore - runtime fetch; bundlers will serve from public/
-    const g: any = (globalThis as any);
-    if (g && g.__KR_HOLIDAYS_CACHE__ === undefined) {
-      g.__KR_HOLIDAYS_CACHE__ = fetch("/kr-holidays.json").then((r: any) => r.json()).catch(() => []);
-    }
-    // Note: this is a synchronous pass; the first render will omit holidays; subsequent renders in the app will include them when data is fetched at page-level.
-    // To avoid introducing state in this component, we accept first-render miss.
-    // If needed later, lift to parent.
-  } catch {}
-
-  const holidayRanges = buildHolidayRangesForDomain({ domainMMDD, years, customIsoRanges: customRanges });
+  const [holidayRanges, setHolidayRanges] = useState(() => [] as ReturnType<typeof buildHolidayRangesForDomain>);
+  useEffect(() => {
+    (async () => {
+      try {
+        const today = new Date();
+        const years = [today.getFullYear(), today.getFullYear() + 1];
+        const r = await fetch(`/api/kr-holidays?years=${years.join(',')}`);
+        if (!r.ok) return;
+        const json = await r.json();
+        const customRanges: HolidayRangeIso[] = Array.isArray(json?.ranges) ? json.ranges : [];
+        const mmddRanges = buildHolidayRangesForDomain({ domainMMDD, years, customIsoRanges: customRanges });
+        setHolidayRanges(mmddRanges);
+      } catch {}
+    })();
+  }, [JSON.stringify(domainMMDD)]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     const effectiveActive = locked ? true : active;
