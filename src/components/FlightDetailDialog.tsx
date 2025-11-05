@@ -98,19 +98,19 @@ export const FlightDetailDialog = ({
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
-          {/* 모바일: 1열 3행, sm 이상: 3열 */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-sm text-gray-600 mb-1">최저가</p>
-              <p className="text-2xl sm:text-xl font-bold text-gray-900 break-words">{minPrice.toLocaleString()}<span className="text-sm text-gray-500 ml-1">원</span></p>
+          {/* 가격 정보: 모바일 3열, 데스크톱 3열 */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <p className="text-xs text-gray-600 mb-1">최저가</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 break-words">{minPrice.toLocaleString()}<span className="text-xs text-gray-500 ml-0.5">원</span></p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-sm text-gray-600 mb-1">평균가</p>
-              <p className="text-2xl sm:text-xl font-bold text-gray-900 break-words">{avgPrice.toLocaleString()}<span className="text-sm text-gray-500 ml-1">원</span></p>
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <p className="text-xs text-gray-600 mb-1">평균가</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 break-words">{avgPrice.toLocaleString()}<span className="text-xs text-gray-500 ml-0.5">원</span></p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-sm text-gray-600 mb-1">최고가</p>
-              <p className="text-2xl sm:text-xl font-bold text-gray-900 break-words">{maxPrice.toLocaleString()}<span className="text-sm text-gray-500 ml-1">원</span></p>
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <p className="text-xs text-gray-600 mb-1">최고가</p>
+              <p className="text-base sm:text-xl font-bold text-gray-900 break-words">{maxPrice.toLocaleString()}<span className="text-xs text-gray-500 ml-0.5">원</span></p>
             </div>
           </div>
 
@@ -128,37 +128,30 @@ export const FlightDetailDialog = ({
             })()}</div>
           ) : null}
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-500" />
-                <label className="text-sm font-medium text-gray-900">여행 기간</label>
-              </div>
-              <Select
-                value={tripDuration}
-                onValueChange={(v) => {
-                  setTripDuration(v);
-                  const n = parseInt(v, 10);
-                  if (!Number.isNaN(n)) onTripDaysChange?.(n);
-                }}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="3">3일</SelectItem>
-                  <SelectItem value="4">4일</SelectItem>
-                  <SelectItem value="5">5일</SelectItem>
-                  <SelectItem value="6">6일</SelectItem>
-                  <SelectItem value="7">7일</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-gray-500" />
+              <label className="text-sm font-medium text-gray-900">여행 기간</label>
             </div>
-
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Clock className="h-4 w-4" />
-              <span>선택한 기간: {tripDuration}일</span>
-            </div>
+            <Select
+              value={tripDuration}
+              onValueChange={(v) => {
+                setTripDuration(v);
+                const n = parseInt(v, 10);
+                if (!Number.isNaN(n)) onTripDaysChange?.(n);
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3">3일</SelectItem>
+                <SelectItem value="4">4일</SelectItem>
+                <SelectItem value="5">5일</SelectItem>
+                <SelectItem value="6">6일</SelectItem>
+                <SelectItem value="7">7일</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
