@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import Logo from "../Logo";
+// NOTE: Title uses PNG logo placed under public/logo.png
 
 interface HeroSectionProps {
   onContinentClick?: (continent: string) => void;
@@ -18,9 +18,9 @@ export function HeroSection({ onContinentClick }: HeroSectionProps) {
       <div className="container mx-auto px-4 py-4">
         {/* 왼쪽 정렬 */}
         <div>
-          {/* 메인 타이틀 - 로고 + 서비스명 */}
+          {/* 메인 타이틀 - PNG 로고 + 서비스명 */}
           <h1 className="flex items-center gap-2 text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            <Logo className="h-[1em] w-[1em]" />
+            <img src="/logo.png" alt="LuckyGlide" className="h-[1em] w-[1em] align-text-bottom" />
             <span>LuckyGlide</span>
           </h1>
           
