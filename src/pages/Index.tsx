@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { FlightCard } from "@/components/FlightCard";
+import { FlightCardSkeleton } from "@/components/FlightCard/FlightCardSkeleton";
 import { FlightDetailDialog } from "@/components/FlightDetailDialog";
+import { HeroSection } from "@/components/Hero/HeroSection";
+import { FilterSidebar } from "@/components/Filters/FilterSidebar";
 // import { mockFlights, Flight } from "@/data/mockFlights";
 // import { Plane } from "lucide-react";
 import { codeToCountry, emojiFromCountryCode } from "@/lib/flags";
@@ -382,106 +385,130 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg">
-              <img src="/logo.svg" alt="LuckyGlide" className="h-8 w-8" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">LuckyGlide</h1>
-              <p className="text-sm text-muted-foreground">떠나기 좋은 날짜를 알려드려요</p>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Hero Section */}
+      <HeroSection onContinentClick={(continent) => setSelectedContinent(continent)} />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* 1행: 도시 검색 + 고급 필터 토글 */}
-        <div className="mb-3 flex gap-2 items-center">
-          <Input className="w-full sm:w-[300px]" placeholder="도시명으로 검색" value={cityQuery} onChange={(e)=>setCityQuery(e.target.value)} />
-          <Button variant="outline" className="whitespace-nowrap" onClick={()=>setShowAdvanced(v=>!v)}>
-            {showAdvanced ? '검색 조건 접기' : '검색 조건 추가하기'}
-          </Button>
-        </div>
-
-        {/* 2행: 고급 조건(정렬/여정 길이/일정/직항) */}
-        {showAdvanced && (
-        <div className="mb-4 space-y-3">
-          {/* 정렬 방식 */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <span className="w-full sm:w-20 text-sm text-muted-foreground">정렬 방식</span>
-            <Select value={sortKey} onValueChange={setSortKey}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="정렬 방식" />
-            </SelectTrigger>
-            <SelectContent>
-                {sortOptions.map((o) => (
-                  <SelectItem key={o.key} value={o.key}>
-                    {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-          {/* 여정 길이 */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <span className="w-full sm:w-20 text-sm text-muted-foreground">여정 길이</span>
-            <Select value={tripDaysSel} onValueChange={setTripDaysSel}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="여정 길이" />
-              </SelectTrigger>
-              <SelectContent>
-                {tripDayOptions.map((o) => (
-                  <SelectItem key={o} value={o}>{o}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 여정 일정 */}
-          <div className="flex flex-col gap-1">
-            <span className="text-sm text-muted-foreground">여정 일정</span>
-            <div className="flex items-center gap-1 w-full">
-              <Input className="flex-1 min-w-[120px]" placeholder="출발일 YYYY-MM-DD" value={fixedDepIso ?? ''} onChange={(e)=>setFixedDepIso(e.target.value || null)} />
-              <span className="px-1 text-muted-foreground">~</span>
-              <Input className="flex-1 min-w-[120px]" placeholder="도착일 YYYY-MM-DD" value={fixedRetIso ?? ''} onChange={(e)=>setFixedRetIso(e.target.value || null)} />
-            </div>
-          </div>
-
-          {/* 직항 여부 */}
-          <div className="flex flex-row items-center gap-2">
-            <span className="w-20 text-sm text-muted-foreground">직항 여부</span>
-            <Checkbox checked={directOnly} onCheckedChange={(v:any) => setDirectOnly(Boolean(v))} />
-          </div>
-        </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredFlights.map((flight) => (
-            <FlightCard
-              key={flight.id}
-              city={flight.city}
-              country={flight.country}
-              countryCode={flight.countryCode}
-              price={flight.price}
-              originalPrice={flight.originalPrice}
-              discount={flight.discount}
-              travelDates={flight.travelDates}
-              collectedAt={(flight as any).collectedAt}
-              meta={flight.meta}
-              nonstop={directOnly}
-              onClick={() => handleFlightClick(flight)}
-              onShowChart={() => handleFlightClick(flight)}
-              // 새로고침 기능은 유지하되 UI는 숨김 처리됨
-              onRefresh={() => handleRefresh(flight.code)}
-              refreshLoading={refreshingCodes.has(flight.code)}
-              justRefreshed={justRefreshedCodes.has(flight.code)}
+        <div className="flex gap-6">
+          {/* Desktop Sidebar - 데스크톱에서만 표시 */}
+          <div className="hidden lg:block">
+            <FilterSidebar
+              regions={continents}
+              selectedRegion={selectedContinent}
+              onRegionChange={setSelectedContinent}
+              directOnly={directOnly}
+              onDirectChange={setDirectOnly}
+              tripDays={tripDaysSel}
+              onTripDaysChange={setTripDaysSel}
+              tripDayOptions={tripDayOptions}
             />
-          ))}
+          </div>
+
+          {/* Main Grid Area */}
+          <div className="flex-1 min-w-0">
+            {/* 상단 검색 + 정렬 바 */}
+            <div className="mb-6 space-y-3">
+              {/* 도시 검색 */}
+              <div className="flex gap-2 items-center">
+                <Input 
+                  className="flex-1" 
+                  placeholder="도시명으로 검색" 
+                  value={cityQuery} 
+                  onChange={(e)=>setCityQuery(e.target.value)} 
+                />
+                {/* 모바일 필터 토글 버튼 */}
+                <Button variant="outline" className="lg:hidden whitespace-nowrap" onClick={()=>setShowAdvanced(v=>!v)}>
+                  {showAdvanced ? '필터 닫기' : '필터 열기'}
+                </Button>
+              </div>
+
+              {/* 정렬 */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">정렬:</span>
+                <Select value={sortKey} onValueChange={setSortKey}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="정렬 방식" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortOptions.map((o) => (
+                      <SelectItem key={o.key} value={o.key}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground ml-auto">
+                  {filteredFlights.length}개 항공권
+                </span>
+              </div>
+
+              {/* 모바일 필터 - 모바일에서만 표시 */}
+              {showAdvanced && (
+                <div className="lg:hidden p-4 border rounded-lg bg-card space-y-4">
+                  <FilterSidebar
+                    regions={continents}
+                    selectedRegion={selectedContinent}
+                    onRegionChange={setSelectedContinent}
+                    directOnly={directOnly}
+                    onDirectChange={setDirectOnly}
+                    tripDays={tripDaysSel}
+                    onTripDaysChange={setTripDaysSel}
+                    tripDayOptions={tripDayOptions}
+                  />
+                  
+                  {/* 고급 날짜 필터 */}
+                  <div className="pt-4 border-t">
+                    <h3 className="font-semibold text-sm mb-3">여정 일정 (선택)</h3>
+                    <div className="flex flex-col gap-2">
+                      <Input 
+                        placeholder="출발일 YYYY-MM-DD" 
+                        value={fixedDepIso ?? ''} 
+                        onChange={(e)=>setFixedDepIso(e.target.value || null)} 
+                      />
+                      <Input 
+                        placeholder="도착일 YYYY-MM-DD" 
+                        value={fixedRetIso ?? ''} 
+                        onChange={(e)=>setFixedRetIso(e.target.value || null)} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 카드 그리드 */}
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <FlightCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {filteredFlights.map((flight) => (
+                  <FlightCard
+                    key={flight.id}
+                    city={flight.city}
+                    country={flight.country}
+                    countryCode={flight.countryCode}
+                    price={flight.price}
+                    originalPrice={flight.originalPrice}
+                    discount={flight.discount}
+                    travelDates={flight.travelDates}
+                    collectedAt={(flight as any).collectedAt}
+                    meta={flight.meta}
+                    nonstop={directOnly}
+                    onClick={() => handleFlightClick(flight)}
+                    onShowChart={() => handleFlightClick(flight)}
+                    onRefresh={() => handleRefresh(flight.code)}
+                    refreshLoading={refreshingCodes.has(flight.code)}
+                    justRefreshed={justRefreshedCodes.has(flight.code)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </main>
 
