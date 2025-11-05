@@ -12,12 +12,12 @@
   animation: lg-flash-bg 800ms ease-out;
 }
 
-/* Blue outline flash to signal update */
+/* Gray outline flash to signal update (무채색) */
 @keyframes lg-flash-outline-kf {
-  0% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
-  15% { box-shadow: 0 0 0 2px rgba(59,130,246,0.9); }
-  85% { box-shadow: 0 0 0 2px rgba(59,130,246,0.9); }
-  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  0% { box-shadow: 0 0 0 0 rgba(107,114,128,0); }
+  15% { box-shadow: 0 0 0 2px rgba(107,114,128,0.6); }
+  85% { box-shadow: 0 0 0 2px rgba(107,114,128,0.6); }
+  100% { box-shadow: 0 0 0 0 rgba(107,114,128,0); }
 }
 
 .lg-flash-outline {
@@ -39,27 +39,27 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 20%;
 
-    --primary: 205 90% 48%;
+    --primary: 0 0% 9%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 95%;
-    --secondary-foreground: 220 15% 20%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
 
-    --muted: 210 20% 95%;
-    --muted-foreground: 220 10% 50%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 205 90% 48%;
+    --accent: 0 0% 9%;
     --accent-foreground: 0 0% 100%;
 
-    --success: 142 70% 45%;
+    --success: 0 0% 9%;
     --success-foreground: 0 0% 100%;
 
-    --destructive: 0 85% 60%;
+    --destructive: 0 0% 9%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 205 90% 48%;
+    --border: 0 0% 89%;
+    --input: 0 0% 89%;
+    --ring: 0 0% 45%;
 
     --radius: 0.75rem;
 

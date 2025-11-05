@@ -72,7 +72,7 @@ export const FlightDetailDialog = ({
       <DialogContent className={`max-w-3xl max-h-[90vh] overflow-y-auto ${justRefreshed ? 'lg-flash-outline' : ''}`}>
         <DialogHeader>
           <div className="flex items-start gap-3 mb-2 text-left">
-            <div className="w-12 h-9 rounded border border-border overflow-hidden flex items-center justify-center bg-muted">
+            <div className="w-12 h-9 rounded border border-gray-200 overflow-hidden flex items-center justify-center bg-gray-50">
               {countryCode ? (
                 <img
                   src={flagUrlFromCountryCode(countryCode, 24) || fallbackFlagUrl(countryCode)}
@@ -91,8 +91,8 @@ export const FlightDetailDialog = ({
               )}
             </div>
             <div className="text-left">
-              <DialogTitle className="text-2xl text-left">{city}</DialogTitle>
-              <DialogDescription className="text-base text-left">{country}</DialogDescription>
+              <DialogTitle className="text-2xl text-left text-gray-900">{city}</DialogTitle>
+              <DialogDescription className="text-base text-left text-gray-600">{country}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -100,22 +100,22 @@ export const FlightDetailDialog = ({
         <div className="space-y-6 mt-4">
           {/* 모바일: 1열 3행, sm 이상: 3열 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-secondary rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">최저가</p>
-              <p className="text-2xl sm:text-xl font-bold text-success break-words">₩{minPrice.toLocaleString()}</p>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-sm text-gray-600 mb-1">최저가</p>
+              <p className="text-2xl sm:text-xl font-bold text-gray-900 break-words">{minPrice.toLocaleString()}<span className="text-sm text-gray-500 ml-1">원</span></p>
             </div>
-            <div className="bg-secondary rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">평균가</p>
-              <p className="text-2xl sm:text-xl font-bold text-foreground break-words">₩{avgPrice.toLocaleString()}</p>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-sm text-gray-600 mb-1">평균가</p>
+              <p className="text-2xl sm:text-xl font-bold text-gray-900 break-words">{avgPrice.toLocaleString()}<span className="text-sm text-gray-500 ml-1">원</span></p>
             </div>
-            <div className="bg-secondary rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">최고가</p>
-              <p className="text-2xl sm:text-xl font-bold text-destructive break-words">₩{maxPrice.toLocaleString()}</p>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-sm text-gray-600 mb-1">최고가</p>
+              <p className="text-2xl sm:text-xl font-bold text-gray-900 break-words">{maxPrice.toLocaleString()}<span className="text-sm text-gray-500 ml-1">원</span></p>
             </div>
           </div>
 
           {collectedAt ? (
-            <div className="text-xs text-muted-foreground">가격 수집 시점: {(() => {
+            <div className="text-xs text-gray-500">가격 수집 시점: {(() => {
               try {
                 const d = new Date(collectedAt);
                 const y = d.getFullYear();
@@ -131,8 +131,8 @@ export const FlightDetailDialog = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <label className="text-sm font-medium">여행 기간</label>
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <label className="text-sm font-medium text-gray-900">여행 기간</label>
               </div>
               <Select
                 value={tripDuration}
@@ -155,14 +155,14 @@ export const FlightDetailDialog = ({
               </Select>
             </div>
 
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
               <Clock className="h-4 w-4" />
               <span>선택한 기간: {tripDuration}일</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <h4 className="font-semibold text-lg">날짜별 가격 추이</h4>
+            <h4 className="font-semibold text-lg text-gray-900">날짜별 가격 추이</h4>
             {/* 기간 변경 시 강제 리마운트로 그래프 갱신 보장 + hover 예약 버튼 */}
             <PriceChart
               key={`chart-${tripDuration}`}
@@ -237,9 +237,9 @@ export const FlightDetailDialog = ({
                 gaEvent('click_detail', { code, city, depdt: depIso, rtndt: retIso, nonstop: Boolean(nonstop), price: best.price, tripDays: days });
               }}
             >
-              <Button className="w-full" size="lg">최저가 예약하기</Button>
+              <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white" size="lg">최저가 예약하기</Button>
             </a>
-            <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" size="lg" className="border-gray-200 text-gray-700 hover:bg-gray-50" onClick={() => onOpenChange(false)}>
               닫기
             </Button>
           </div>

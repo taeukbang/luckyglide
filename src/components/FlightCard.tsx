@@ -123,19 +123,19 @@ export const FlightCard = ({
           </div>
           
           <div className="flex flex-col items-end flex-shrink-0">
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-baseline gap-1.5">
+              {meta && (meta as any).isGood ? (
+                <span className="text-[10px] font-semibold text-red-500 self-start mt-0.5">
+                  특가
+                </span>
+              ) : null}
               <div className="text-2xl font-bold text-gray-900 leading-tight">
                 {typeof price === 'number' ? `${price.toLocaleString()}` : '가격 정보 없음.'}
               </div>
               <span className="text-sm text-gray-500">원</span>
             </div>
-            {meta && (meta as any).isGood ? (
-              <span className="text-xs font-semibold text-red-500 mt-0.5">
-                특가
-              </span>
-            ) : null}
             <span className="text-xs text-gray-500 leading-tight mt-1">
-              ({travelDates}{meta?.tripDays ? `, ${meta.tripDays}일` : ""})
+              {travelDates}{meta?.tripDays ? `, ${meta.tripDays}일` : ""}
             </span>
             {formatCollected(collectedAt) ? (
               <span className="text-[10px] text-gray-400 leading-tight mt-0.5">수집 {formatCollected(collectedAt)}</span>

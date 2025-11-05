@@ -14,16 +14,17 @@ const popularRegions = [
 export function HeroSection({ onContinentClick }: HeroSectionProps) {
   return (
     <div className="bg-white border-b border-gray-200">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* 메인 타이틀 - 미니멀 */}
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+      <div className="container mx-auto px-4 py-4">
+        {/* 왼쪽 정렬 */}
+        <div>
+          {/* 메인 타이틀 - 미니멀, 줄바꿈 방지 */}
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
             항공권 최저가 검색
           </h1>
           
-          {/* 서브타이틀 - 회색 */}
-          <p className="text-base text-gray-600 mb-6">
-            실시간 최저가를 비교하고 저렴한 항공권을 예약하세요
+          {/* 서브타이틀 - 회색, 문구 축약 */}
+          <p className="text-sm text-gray-600 mb-4">
+            여행지의 항공권 최저가 일정을 검색해보세요
           </p>
           
           {/* 인기 지역 - 미니멀 칩 */}
