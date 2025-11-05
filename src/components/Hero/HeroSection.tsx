@@ -28,13 +28,13 @@ export function HeroSection({ onContinentClick }: HeroSectionProps) {
           </p>
           
           {/* 인기 지역 - 미니멀 칩 */}
-          <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex flex-wrap gap-1.5 items-center">
             <span className="text-sm text-gray-500">지역</span>
             {popularRegions.map((region) => (
               <button
                 key={region.name}
                 onClick={() => onContinentClick?.(region.name)}
-                className="px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm rounded-md border border-gray-200 transition-colors"
+                className="px-2 py-1 bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm rounded-md border border-gray-200 transition-colors whitespace-nowrap"
               >
                 <span className="mr-1">{region.emoji}</span>
                 {region.name}

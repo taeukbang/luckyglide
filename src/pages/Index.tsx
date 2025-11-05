@@ -409,21 +409,21 @@ const Index = () => {
             {/* 상단 검색 + 정렬 바 */}
             <div className="mb-6 space-y-3">
               {/* 도시 검색 */}
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-2 items-center h-10">
                 <Input 
-                  className="flex-1" 
+                  className="flex-1 h-10" 
                   placeholder="도시명으로 검색" 
                   value={cityQuery} 
                   onChange={(e)=>setCityQuery(e.target.value)} 
                 />
                 {/* 모바일 필터 토글 버튼 */}
-                <Button variant="outline" className="lg:hidden whitespace-nowrap" onClick={()=>setShowAdvanced(v=>!v)}>
+                <Button variant="outline" className="lg:hidden whitespace-nowrap h-10" onClick={()=>setShowAdvanced(v=>!v)}>
                   {showAdvanced ? '필터 닫기' : '필터 열기'}
                 </Button>
               </div>
 
               {/* 직항만 보기 - 항상 표시 */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 h-10">
                 <Checkbox
                   id="direct-only-main"
                   checked={directOnly}
@@ -435,10 +435,10 @@ const Index = () => {
               </div>
 
               {/* 정렬 */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600">정렬:</span>
+              <div className="flex items-center gap-3 h-10">
+                <span className="text-sm text-gray-700">정렬:</span>
                 <Select value={sortKey} onValueChange={setSortKey}>
-                  <SelectTrigger className="w-[200px] border-gray-200">
+                  <SelectTrigger className="w-[200px] h-10 border-gray-200">
                     <SelectValue placeholder="정렬 방식" />
                   </SelectTrigger>
                   <SelectContent>
