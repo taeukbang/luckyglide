@@ -70,7 +70,39 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
         const json = await r.json();
         const customRanges: HolidayRangeIso[] = Array.isArray(json?.ranges) ? json.ranges : [];
         const mmddRanges = buildHolidayRangesForDomain({ domainMMDD, years, customIsoRanges: customRanges, domainIsoSet });
-        setHolidayRanges(mmddRanges);
+
+        // Build weekend shading ranges (label suppressed later)
+        const weekendRanges = (() => {
+          const out: { startMMDD: string; endMMDD: string; label: string }[] = [];
+          let runStart: string | null = null;
+          let prevIdx = -1;
+          for (let i = 0; i < domainMMDD.length; i++) {
+            const mmdd = domainMMDD[i];
+            const iso = localMap[mmdd];
+            if (!iso) continue;
+            const [y, m, d] = iso.split("-").map((s) => Number(s));
+            const dow = new Date(y, m - 1, d).getDay();
+            const isWeekend = (dow === 0 || dow === 6);
+            if (isWeekend) {
+              if (runStart == null) {
+                runStart = mmdd;
+                prevIdx = i;
+              } else if (i !== prevIdx + 1) {
+                // gap - flush previous
+                out.push({ startMMDD: runStart, endMMDD: domainMMDD[prevIdx], label: "주말" });
+                runStart = mmdd;
+              }
+              prevIdx = i;
+            } else if (runStart != null) {
+              out.push({ startMMDD: runStart, endMMDD: domainMMDD[prevIdx], label: "주말" });
+              runStart = null;
+            }
+          }
+          if (runStart != null) out.push({ startMMDD: runStart, endMMDD: domainMMDD[prevIdx], label: "주말" });
+          return out;
+        })();
+
+        setHolidayRanges([...(weekendRanges as any), ...mmddRanges]);
       } catch {}
     })();
   }, [JSON.stringify(domainMMDD)]);
@@ -217,7 +249,8 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
               for (let i = startIdx; i <= endIdx; i++) {
                 const iso = mmddIsoMap[domainMMDD[i]];
                 if (!iso) return false;
-                const dow = new Date(iso).getDay();
+                const [y, m, d] = iso.split("-").map((s) => Number(s));
+                const dow = new Date(y, m - 1, d).getDay();
                 if (dow !== 0 && dow !== 6) return false; // weekday exists
               }
               return true;
@@ -230,7 +263,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
                 {/* Always shade (even single-day) */}
                 <ReferenceArea key={`area-${idx}`} x1={h.startMMDD} x2={h.endMMDD} fill={shade} fillOpacity={shadeOpacity} ifOverflow="extendDomain" />
                 {/* Extra vertical line for single-day to increase visibility */}
-                {span <= 1 ? (
+                {span <= 1 && !isWeekendOnly ? (
                   <ReferenceLine key={`line-${idx}`} x={h.startMMDD} stroke={shade} strokeOpacity={lineOpacity} />
                 ) : null}
                 {!isWeekendOnly ? (
