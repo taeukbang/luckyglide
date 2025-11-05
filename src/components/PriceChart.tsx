@@ -45,6 +45,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
   // ---- Holidays (background shading) ----
   const domainMMDD = Array.isArray(data) ? data.map((d) => String(d.date)) : [];
   const [holidayRanges, setHolidayRanges] = useState(() => [] as ReturnType<typeof buildHolidayRangesForDomain>);
+  const [mmddIsoMap, setMmddIsoMap] = useState({} as Record<string, string>);
   useEffect(() => {
     (async () => {
       try {
@@ -52,6 +53,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
         const years = [today.getFullYear(), today.getFullYear() + 1];
         // Build an approximate ISO mapping for domain MM/DD (year rollover after 'today')
         const domainIsoSet = new Set<string>();
+        const localMap: Record<string, string> = {};
         for (const mmdd of domainMMDD) {
           const [mmStr, ddStr] = String(mmdd).split("/");
           let year = today.getFullYear();
@@ -60,7 +62,9 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
           if (candidate < todayMid) year += 1; // rollover
           const iso = `${year}-${String(mmStr).padStart(2, "0")}-${String(ddStr).padStart(2, "0")}`;
           domainIsoSet.add(iso);
+          localMap[String(mmdd)] = iso;
         }
+        setMmddIsoMap(localMap);
         const r = await fetch(`/api/kr-holidays?years=${years.join(',')}`);
         if (!r.ok) return;
         const json = await r.json();
@@ -207,16 +211,31 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
             const span = startIdx >= 0 && endIdx >= 0 ? (endIdx - startIdx + 1) : 1;
             const mid = startIdx >= 0 && endIdx >= 0 ? domainMMDD[Math.floor((startIdx + endIdx) / 2)] : h.startMMDD;
             const dy = (idx % 3) * 12; // stagger labels to reduce overlap
+            // weekend-only? -> omit label but still shade
+            const isWeekendOnly = (() => {
+              if (startIdx < 0 || endIdx < 0) return false;
+              for (let i = startIdx; i <= endIdx; i++) {
+                const iso = mmddIsoMap[domainMMDD[i]];
+                if (!iso) return false;
+                const dow = new Date(iso).getDay();
+                if (dow !== 0 && dow !== 6) return false; // weekday exists
+              }
+              return true;
+            })();
+            const shade = "#ef4444"; // red-500
+            const shadeOpacity = 0.08;
+            const lineOpacity = 0.45;
             return (
               <>
-                {span > 1 ? (
-                  <ReferenceArea key={`area-${idx}`} x1={h.startMMDD} x2={h.endMMDD} fill="#6366f1" fillOpacity={0.08} ifOverflow="extendDomain" />
-                ) : null}
-                {/* Label or vertical line for single-day */}
+                {/* Always shade (even single-day) */}
+                <ReferenceArea key={`area-${idx}`} x1={h.startMMDD} x2={h.endMMDD} fill={shade} fillOpacity={shadeOpacity} ifOverflow="extendDomain" />
+                {/* Extra vertical line for single-day to increase visibility */}
                 {span <= 1 ? (
-                  <ReferenceLine key={`line-${idx}`} x={h.startMMDD} stroke="#6366f1" strokeOpacity={0.4} />
+                  <ReferenceLine key={`line-${idx}`} x={h.startMMDD} stroke={shade} strokeOpacity={lineOpacity} />
                 ) : null}
-                <ReferenceLine key={`label-${idx}`} x={mid} strokeOpacity={0} label={{ value: h.label, position: "insideTop", dy, fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+                {!isWeekendOnly ? (
+                  <ReferenceLine key={`label-${idx}`} x={mid} strokeOpacity={0} label={{ value: h.label, position: "insideTop", dy, fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+                ) : null}
               </>
             );
           })}
