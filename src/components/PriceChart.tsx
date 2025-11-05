@@ -101,8 +101,8 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     const { cx, cy, payload } = props;
     const isMin = !!(minPoint && payload?.date === minPoint.date && Number(payload?.price) === Number(minPoint.price));
     const r = isMin ? 6 : 2;
-    const fill = isMin ? "hsl(var(--destructive))" : "hsl(var(--primary))";
-    const stroke = isMin ? "hsl(var(--destructive))" : "hsl(var(--primary))";
+    const fill = isMin ? "#ef4444" : "#3b82f6";
+    const stroke = isMin ? "#ef4444" : "#3b82f6";
     return <circle cx={cx} cy={cy} r={r} fill={fill} stroke={stroke} strokeWidth={isMin ? 2 : 1} />;
   };
 
@@ -167,9 +167,9 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
                 }
               : {})}
           />
-          <Line type="monotone" dataKey="price" stroke="hsl(var(--primary))" strokeWidth={2} dot={<CustomDot />} />
+          <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2} dot={<CustomDot />} />
           {minPoint ? (
-            <ReferenceDot x={minPoint.date} y={minPoint.price} r={8} fill="transparent" stroke="hsl(var(--destructive))" strokeWidth={2} />
+            <ReferenceDot x={minPoint.date} y={minPoint.price} r={8} fill="transparent" stroke="#ef4444" strokeWidth={2} />
           ) : null}
         </LineChart>
       </ResponsiveContainer>

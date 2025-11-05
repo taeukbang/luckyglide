@@ -155,7 +155,7 @@ export const FlightDetailDialog = ({
           </div>
 
           <div className="space-y-2">
-            <h4 className="font-semibold text-lg text-gray-900">날짜별 가격 추이</h4>
+            <h4 className="font-semibold text-lg text-blue-600">날짜별 가격 추이</h4>
             {/* 기간 변경 시 강제 리마운트로 그래프 갱신 보장 + hover 예약 버튼 */}
             <PriceChart
               key={`chart-${tripDuration}`}
@@ -168,7 +168,7 @@ export const FlightDetailDialog = ({
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-4">
             {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
             <Button variant="outline" className="hidden" onClick={onRefresh} disabled={!!refreshLoading}>
               {refreshLoading ? '새로고침 중…' : '새로고침'}
@@ -230,9 +230,9 @@ export const FlightDetailDialog = ({
                 gaEvent('click_detail', { code, city, depdt: depIso, rtndt: retIso, nonstop: Boolean(nonstop), price: best.price, tripDays: days });
               }}
             >
-              <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white" size="lg">최저가 예약하기</Button>
+              <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white px-4" size="lg">최저가 예약하기</Button>
             </a>
-            <Button variant="outline" size="lg" className="border-gray-200 text-gray-700 hover:bg-gray-50" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" size="lg" className="border-gray-200 text-gray-700 hover:bg-gray-50 px-6" onClick={() => onOpenChange(false)}>
               닫기
             </Button>
           </div>
