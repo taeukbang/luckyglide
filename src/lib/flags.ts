@@ -8,17 +8,17 @@ export function emojiFromCountryCode(alpha2?: string | null) {
   return chars.join("");
 }
 
-// 국기 SVG URL 생성(https://flagcdn.com/ 기준, 48px)
+// 국기 SVG URL 생성 (기본: cdn.jsdelivr.net SVG)
 export function flagUrlFromCountryCode(alpha2?: string | null, size: 48 | 24 = 24) {
   if (!alpha2) return "";
-  const code = alpha2.toLowerCase();
-  return `https://flagcdn.com/w${size}/${code}.png`;
+  const code = alpha2.toUpperCase();
+  return `https://cdn.jsdelivr.net/npm/country-flag-icons/3x2/${code}.svg`;
 }
 
 export function fallbackFlagUrl(alpha2?: string | null) {
   if (!alpha2) return "";
-  const code = alpha2.toUpperCase();
-  return `https://cdn.jsdelivr.net/npm/country-flag-icons/3x2/${code}.svg`;
+  const code = alpha2.toLowerCase();
+  return `https://flagcdn.com/${code}.svg`;
 }
 
 export interface CountryMeta { countryKo: string; countryCode: string }
