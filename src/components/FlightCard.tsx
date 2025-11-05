@@ -145,19 +145,23 @@ export const FlightCard = ({
 
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Button
+            {/* 그래프 보기 버튼 주석처리 */}
+            {/* <Button
               size="sm"
               variant="ghost"
               className="text-xs h-7 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               onClick={(e)=>{ e.stopPropagation(); setOpenSpark(v=>!v); }}
             >
               {openSpark ? '그래프 닫기' : '그래프 보기'}
-            </Button>
+            </Button> */}
           </div>
           <div className="flex items-center gap-2">
             {/* 새로고침 기능 유지하되, UI는 숨김 처리 */}
             <Button size="sm" className="text-xs h-7 px-3 hidden" variant="outline" onClick={(e)=>{ e.stopPropagation(); onRefresh?.(); }} disabled={!!refreshLoading}>
               {refreshLoading ? '새로고침 중…' : '새로고침'}
+            </Button>
+            <Button size="sm" className="text-xs h-7 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
+              일자별 가격 그래프
             </Button>
             <a
               href={(() => {
@@ -187,9 +191,6 @@ export const FlightCard = ({
                 예약하기
               </Button>
             </a>
-            <Button size="sm" className="text-xs h-7 px-3 text-gray-600 hover:bg-gray-100" variant="ghost" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
-              가격 변동
-            </Button>
           </div>
         </div>
         {openSpark && (
