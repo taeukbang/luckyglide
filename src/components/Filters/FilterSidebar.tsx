@@ -25,7 +25,7 @@ export function FilterSidebar({
   return (
     <aside className={isMobile ? "" : "w-64 flex-shrink-0 sticky top-4 h-fit bg-white rounded-lg border border-gray-200 p-4 space-y-6"}>
       {/* 지역 필터 */}
-      <div className={isMobile ? "" : "pb-2"}>
+      <div className="pb-3">
         <h3 className="font-semibold text-sm mb-3 text-gray-900">지역</h3>
         <RadioGroup value={selectedRegion} onValueChange={onRegionChange}>
           <div className={isMobile ? "grid grid-cols-3 gap-2" : ""}>

@@ -407,7 +407,7 @@ const Index = () => {
           {/* Main Grid Area */}
           <div className="flex-1 min-w-0">
             {/* 상단 검색 + 정렬 바 */}
-            <div className="mb-6 space-y-3">
+            <div className="mb-6 space-y-2">
               {/* 도시 검색 */}
               <div className="flex gap-2 items-center h-10">
                 <Input 
@@ -449,9 +449,6 @@ const Index = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <span className="text-sm text-gray-500 ml-auto">
-                  {filteredFlights.length}개 항공권
-                </span>
               </div>
 
               {/* 모바일 필터 - 모바일에서만 표시 */}
