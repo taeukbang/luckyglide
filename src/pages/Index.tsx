@@ -514,7 +514,7 @@ const Index = () => {
 
       {/* Disclaimer */}
       <footer className="container mx-auto px-4 py-6">
-        <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+        <ul className="text-xs text-gray-500 space-y-1 list-disc pl-4">
           <li>할인율은 해당 기간 중 최고가 대비 할인율을 의미합니다.</li>
           <li>가격은 1인 기준입니다.</li>
           <li>항공권 가격은 실시간으로 변동됩니다. 예약 사이트 이동 시 항공권이 없거나, 수집 시점 대비 가격이 바뀌어 있을 수 있습니다.</li>

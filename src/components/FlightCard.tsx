@@ -88,7 +88,7 @@ export const FlightCard = ({
       <CardContent className="p-3">
         <div className="flex items-center justify-between gap-2 mb-1.5">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-9 h-9 rounded-full border border-border overflow-hidden flex items-center justify-center bg-muted">
+            <div className="w-9 h-9 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center bg-gray-50">
               {(() => {
                 const resolvedCode = countryCode || (meta?.code ? codeToCountry[meta.code]?.countryCode : undefined);
                 const resolvedName = country || (meta?.code ? codeToCountry[meta.code]?.countryKo : undefined) || "";
@@ -194,9 +194,9 @@ export const FlightCard = ({
         </div>
         {openSpark && (
           <div className="pt-2">
-            <div className="bg-muted rounded-md h-14 flex items-center justify-center overflow-hidden">
+            <div className="bg-gray-50 rounded-md h-14 flex items-center justify-center overflow-hidden border border-gray-200">
               {sparkLoading ? (
-                <span className="text-xs text-muted-foreground">로딩 중…</span>
+                <span className="text-xs text-gray-500">로딩 중…</span>
               ) : (
                 <Sparkline data={sparkData} width="100%" height={56} />
               )}
