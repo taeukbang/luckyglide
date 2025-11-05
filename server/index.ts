@@ -134,58 +134,66 @@ app.get("/api/latest", async (req, res) => {
       return res.status(500).json({ error: "Supabase env missing" });
     }
 
-    // tripDays 지정 시: tripDays별 최저가를 직접 계산 (전역 extrema는 trip_days 혼합이라 필터 시 결과가 비는 문제 방지)
-    let extrema: any[] | null = null;
-    if (tripDaysFilter != null) {
-      const { data, error } = await supabase
-        .from("fares_city_extrema_tripdays")
-        .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at,transfer_filter")
-        .eq("from", from)
-        .in("to", codes)
-        .eq("transfer_filter", transfer)
-        .eq("trip_days", tripDaysFilter);
-      if (error) throw error;
-      extrema = data ?? [];
-    } else {
-      // 전역(extrema view) 사용
-      const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
-      const { data, error } = await supabase
-        .from(view)
-        .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at")
-        .eq("from", from)
-        .in("to", codes);
-      if (error) throw error;
-      extrema = data ?? [];
-    }
-    
+    // 병렬 쿼리 실행: extrema, recent, baseline을 동시에 조회
+    const [extremaResult, recentResult, baselineResult] = await Promise.all([
+      // 1. extrema 쿼리 (최저가/최고가)
+      (async () => {
+        if (tripDaysFilter != null) {
+          const { data, error } = await supabase
+            .from("fares_city_extrema_tripdays")
+            .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at,transfer_filter")
+            .eq("from", from)
+            .in("to", codes)
+            .eq("transfer_filter", transfer)
+            .eq("trip_days", tripDaysFilter);
+          if (error) throw error;
+          return data ?? [];
+        } else {
+          // 전역(extrema view) 사용
+          const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
+          const { data, error } = await supabase
+            .from(view)
+            .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at")
+            .eq("from", from)
+            .in("to", codes);
+          if (error) throw error;
+          return data ?? [];
+        }
+      })(),
+      
+      // 2. 최근 수집 시점 쿼리
+      (async () => {
+        let qRecent = supabase
+          .from("fares")
+          .select("to,collected_at")
+          .eq("from", from)
+          .in("to", codes)
+          .eq("transfer_filter", transfer)
+          .eq("is_latest", true)
+          .order("collected_at", { ascending: false });
+        if (tripDaysFilter) qRecent = (qRecent as any).eq("trip_days", tripDaysFilter);
+        const { data: recentRows, error: errRecent } = await qRecent as any;
+        if (errRecent) throw errRecent;
+        return recentRows ?? [];
+      })(),
+      
+      // 3. baseline 쿼리 (통계/badge 계산용)
+      (async () => {
+        const baselineView = transfer === 0 ? "fares_baseline_direct" : "fares_baseline_all";
+        const { data: baseRows, error: errBase } = await supabase
+          .from(baselineView)
+          .select("from,to,sample_rows,p50_price,p25_price,p10_price,p05_price,p01_price")
+          .eq("from", from)
+          .in("to", codes);
+        if (errBase) throw errBase;
+        return baseRows ?? [];
+      })()
+    ]);
 
-    // 최근 수집 시점(해당 목적지의 latest rows 중 최대 collected_at)
-    let qRecent = supabase
-      .from("fares")
-      .select("to,collected_at")
-      .eq("from", from)
-      .in("to", codes)
-      .eq("transfer_filter", transfer)
-      .eq("is_latest", true)
-      .order("collected_at", { ascending: false });
-    if (tripDaysFilter) qRecent = (qRecent as any).eq("trip_days", tripDaysFilter);
-    const { data: recentRows, error: errRecent } = await qRecent as any;
-    if (errRecent) throw errRecent;
-
+    const extrema = extremaResult;
+    const recentRows = recentResult;
     const byTo = new Map<string, any>((extrema ?? []).map((r: any) => [r.to, r]));
-
-    // Optional: baseline join to compute badges (direct or all)
-    let baseByTo: Map<string, any> | null = null;
-    {
-      const baselineView = transfer === 0 ? "fares_baseline_direct" : "fares_baseline_all";
-      const { data: baseRows, error: errBase } = await supabase
-        .from(baselineView)
-        .select("from,to,sample_rows,p50_price,p25_price,p10_price,p05_price,p01_price")
-        .eq("from", from)
-        .in("to", codes);
-      if (errBase) throw errBase;
-      baseByTo = new Map<string, any>((baseRows ?? []).map((r: any) => [r.to, r]));
-    }
+    const baseByTo = new Map<string, any>((baselineResult ?? []).map((r: any) => [r.to, r]));
     const latestCollectedByTo = new Map<string, string>();
     for (const row of (recentRows ?? [])) {
       if (!latestCollectedByTo.has(row.to)) {
