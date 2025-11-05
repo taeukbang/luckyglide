@@ -50,11 +50,22 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
       try {
         const today = new Date();
         const years = [today.getFullYear(), today.getFullYear() + 1];
+        // Build an approximate ISO mapping for domain MM/DD (year rollover after 'today')
+        const domainIsoSet = new Set<string>();
+        for (const mmdd of domainMMDD) {
+          const [mmStr, ddStr] = String(mmdd).split("/");
+          let year = today.getFullYear();
+          const candidate = new Date(year, Number(mmStr) - 1, Number(ddStr));
+          const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          if (candidate < todayMid) year += 1; // rollover
+          const iso = `${year}-${String(mmStr).padStart(2, "0")}-${String(ddStr).padStart(2, "0")}`;
+          domainIsoSet.add(iso);
+        }
         const r = await fetch(`/api/kr-holidays?years=${years.join(',')}`);
         if (!r.ok) return;
         const json = await r.json();
         const customRanges: HolidayRangeIso[] = Array.isArray(json?.ranges) ? json.ranges : [];
-        const mmddRanges = buildHolidayRangesForDomain({ domainMMDD, years, customIsoRanges: customRanges });
+        const mmddRanges = buildHolidayRangesForDomain({ domainMMDD, years, customIsoRanges: customRanges, domainIsoSet });
         setHolidayRanges(mmddRanges);
       } catch {}
     })();
@@ -190,20 +201,25 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
           {minPoint ? (
             <ReferenceDot x={minPoint.date} y={minPoint.price} r={8} fill="transparent" stroke="#ef4444" strokeWidth={2} />
           ) : null}
-          {holidayRanges.map((h, idx) => (
-            <>
-              <ReferenceArea key={`area-${idx}`} x1={h.startMMDD} x2={h.endMMDD} fill="#6366f1" fillOpacity={0.08} ifOverflow="extendDomain" />
-              {/* center label using ReferenceLine at middle index */}
-              {(() => {
-                const startIdx = domainMMDD.indexOf(h.startMMDD);
-                const endIdx = domainMMDD.indexOf(h.endMMDD);
-                const mid = startIdx >= 0 && endIdx >= 0 ? domainMMDD[Math.floor((startIdx + endIdx) / 2)] : h.startMMDD;
-                return (
-                  <ReferenceLine key={`label-${idx}`} x={mid} strokeOpacity={0} label={{ value: h.label, position: "insideTop", fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
-                );
-              })()}
-            </>
-          ))}
+          {holidayRanges.map((h, idx) => {
+            const startIdx = domainMMDD.indexOf(h.startMMDD);
+            const endIdx = domainMMDD.indexOf(h.endMMDD);
+            const span = startIdx >= 0 && endIdx >= 0 ? (endIdx - startIdx + 1) : 1;
+            const mid = startIdx >= 0 && endIdx >= 0 ? domainMMDD[Math.floor((startIdx + endIdx) / 2)] : h.startMMDD;
+            const dy = (idx % 3) * 12; // stagger labels to reduce overlap
+            return (
+              <>
+                {span > 1 ? (
+                  <ReferenceArea key={`area-${idx}`} x1={h.startMMDD} x2={h.endMMDD} fill="#6366f1" fillOpacity={0.08} ifOverflow="extendDomain" />
+                ) : null}
+                {/* Label or vertical line for single-day */}
+                {span <= 1 ? (
+                  <ReferenceLine key={`line-${idx}`} x={h.startMMDD} stroke="#6366f1" strokeOpacity={0.4} />
+                ) : null}
+                <ReferenceLine key={`label-${idx}`} x={mid} strokeOpacity={0} label={{ value: h.label, position: "insideTop", dy, fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+              </>
+            );
+          })}
         </LineChart>
       </ResponsiveContainer>
     </div>

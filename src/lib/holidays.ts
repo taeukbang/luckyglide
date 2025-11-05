@@ -58,15 +58,19 @@ export function buildHolidayRangesForDomain(options: {
   domainMMDD: string[];
   years: number[]; // years visible in the chart domain
   customIsoRanges?: HolidayRangeIso[]; // e.g., 설 연휴, 부처님오신날(음력), 대체공휴일 등
+  domainIsoSet?: Set<string>; // exact ISO dates visible in the chart (if known)
 }): HolidayRangeMMDD[] {
-  const { domainMMDD, years, customIsoRanges = [] } = options;
+  const { domainMMDD, years, customIsoRanges = [], domainIsoSet } = options;
   const fixed = years.flatMap((y) => getFixedHolidayIsoRanges(y));
   const all: HolidayRangeIso[] = [...fixed, ...customIsoRanges];
 
   const mmddRanges: HolidayRangeMMDD[] = [];
   for (const r of all) {
     const isoDays = expandIsoRange(r.startIso, r.endIso);
-    const mmdds = isoDays.map(isoToMMDD).filter((mmdd) => domainMMDD.includes(mmdd));
+    const filteredIso = domainIsoSet
+      ? isoDays.filter((iso) => domainIsoSet.has(iso))
+      : isoDays;
+    const mmdds = filteredIso.map(isoToMMDD).filter((mmdd) => domainMMDD.includes(mmdd));
     if (mmdds.length === 0) continue;
     const startMMDD = mmdds[0];
     const endMMDD = mmdds[mmdds.length - 1];
