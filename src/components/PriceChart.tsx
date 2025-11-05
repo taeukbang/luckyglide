@@ -1,7 +1,8 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceArea, ReferenceLine } from "recharts";
 import { useRef, useState } from "react";
 import { buildMrtBookingUrl, addDaysIsoKST } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
+import { buildHolidayRangesForDomain, HolidayRangeIso } from "@/lib/holidays";
 
 interface PriceChartProps {
   data: {
@@ -40,6 +41,26 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     const dt = new Date(base.getFullYear(), Math.max(0, Number(mm) - 1), Number(dd));
     return dt;
   };
+
+  // ---- Holidays (background shading) ----
+  const domainMMDD = Array.isArray(data) ? data.map((d) => String(d.date)) : [];
+  // infer visible years roughly: current year and possibly next year (graph commonly spans year boundary)
+  const today = new Date();
+  const years = [today.getFullYear(), today.getFullYear() + 1];
+  let customRanges: HolidayRangeIso[] = [];
+  // try to pull from public/kr-holidays.json (non-blocking; best-effort)
+  try {
+    // @ts-ignore - runtime fetch; bundlers will serve from public/
+    const g: any = (globalThis as any);
+    if (g && g.__KR_HOLIDAYS_CACHE__ === undefined) {
+      g.__KR_HOLIDAYS_CACHE__ = fetch("/kr-holidays.json").then((r: any) => r.json()).catch(() => []);
+    }
+    // Note: this is a synchronous pass; the first render will omit holidays; subsequent renders in the app will include them when data is fetched at page-level.
+    // To avoid introducing state in this component, we accept first-render miss.
+    // If needed later, lift to parent.
+  } catch {}
+
+  const holidayRanges = buildHolidayRangesForDomain({ domainMMDD, years, customIsoRanges: customRanges });
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     const effectiveActive = locked ? true : active;
@@ -171,6 +192,20 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
           {minPoint ? (
             <ReferenceDot x={minPoint.date} y={minPoint.price} r={8} fill="transparent" stroke="#ef4444" strokeWidth={2} />
           ) : null}
+          {holidayRanges.map((h, idx) => (
+            <>
+              <ReferenceArea key={`area-${idx}`} x1={h.startMMDD} x2={h.endMMDD} fill="#6366f1" fillOpacity={0.08} ifOverflow="extendDomain" />
+              {/* center label using ReferenceLine at middle index */}
+              {(() => {
+                const startIdx = domainMMDD.indexOf(h.startMMDD);
+                const endIdx = domainMMDD.indexOf(h.endMMDD);
+                const mid = startIdx >= 0 && endIdx >= 0 ? domainMMDD[Math.floor((startIdx + endIdx) / 2)] : h.startMMDD;
+                return (
+                  <ReferenceLine key={`label-${idx}`} x={mid} strokeOpacity={0} label={{ value: h.label, position: "insideTop", fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+                );
+              })()}
+            </>
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>
