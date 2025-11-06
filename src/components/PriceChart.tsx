@@ -42,70 +42,6 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     return dt;
   };
 
-  // ---- Holidays (background shading) ----
-  const domainMMDD = Array.isArray(chartData) ? chartData.map((d: any) => String(d.date)) : [];
-  const [holidayRanges, setHolidayRanges] = useState(() => [] as ReturnType<typeof buildHolidayRangesForDomain>);
-  const [mmddIsoMap, setMmddIsoMap] = useState({} as Record<string, string>);
-  useEffect(() => {
-    (async () => {
-      try {
-        const today = new Date();
-        const years = [today.getFullYear(), today.getFullYear() + 1];
-        // Build an approximate ISO mapping for domain MM/DD (year rollover after 'today')
-        const domainIsoSet = new Set<string>();
-        const localMap: Record<string, string> = {};
-        for (const mmdd of domainMMDD) {
-          const [mmStr, ddStr] = String(mmdd).split("/");
-          let year = today.getFullYear();
-          const candidate = new Date(year, Number(mmStr) - 1, Number(ddStr));
-          const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          if (candidate < todayMid) year += 1; // rollover
-          const iso = `${year}-${String(mmStr).padStart(2, "0")}-${String(ddStr).padStart(2, "0")}`;
-          domainIsoSet.add(iso);
-          localMap[String(mmdd)] = iso;
-        }
-        setMmddIsoMap(localMap);
-        const r = await fetch(`/api/kr-holidays?years=${years.join(',')}`);
-        if (!r.ok) return;
-        const json = await r.json();
-        const customRanges: HolidayRangeIso[] = Array.isArray(json?.ranges) ? json.ranges : [];
-        const mmddRanges = buildHolidayRangesForDomain({ domainMMDD, years, customIsoRanges: customRanges, domainIsoSet });
-
-        // Build weekend shading ranges (label suppressed later)
-        const weekendRanges = (() => {
-          const out: { startMMDD: string; endMMDD: string; label: string }[] = [];
-          let runStart: string | null = null;
-          let prevIdx = -1;
-          for (let i = 0; i < domainMMDD.length; i++) {
-            const mmdd = domainMMDD[i];
-            const iso = localMap[mmdd];
-            if (!iso) continue;
-            const [y, m, d] = iso.split("-").map((s) => Number(s));
-            const dow = new Date(y, m - 1, d).getDay();
-            const isWeekend = (dow === 0 || dow === 6);
-            if (isWeekend) {
-              if (runStart == null) {
-                runStart = mmdd;
-                prevIdx = i;
-              } else if (i !== prevIdx + 1) {
-                // gap - flush previous
-                out.push({ startMMDD: runStart, endMMDD: domainMMDD[prevIdx], label: "주말" });
-                runStart = mmdd;
-              }
-              prevIdx = i;
-            } else if (runStart != null) {
-              out.push({ startMMDD: runStart, endMMDD: domainMMDD[prevIdx], label: "주말" });
-              runStart = null;
-            }
-          }
-          if (runStart != null) out.push({ startMMDD: runStart, endMMDD: domainMMDD[prevIdx], label: "주말" });
-          return out;
-        })();
-
-        setHolidayRanges([...(weekendRanges as any), ...mmddRanges]);
-      } catch {}
-    })();
-  }, [JSON.stringify(domainMMDD)]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     const effectiveActive = locked ? true : active;
@@ -214,6 +150,70 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     const stroke = isMin ? "#ef4444" : "#3b82f6";
     return <circle cx={cx} cy={cy} r={r} fill={fill} stroke={stroke} strokeWidth={isMin ? 2 : 1} />;
   };
+
+  // ---- Holidays (background shading) ----
+  const [holidayRanges, setHolidayRanges] = useState(() => [] as ReturnType<typeof buildHolidayRangesForDomain>);
+  const [mmddIsoMap, setMmddIsoMap] = useState({} as Record<string, string>);
+  useEffect(() => {
+    (async () => {
+      try {
+        const today = new Date();
+        const years = [today.getFullYear(), today.getFullYear() + 1];
+        // Build an approximate ISO mapping for domain MM/DD (year rollover after 'today')
+        const domainIsoSet = new Set<string>();
+        const localMap: Record<string, string> = {};
+        for (const mmdd of domainMMDD) {
+          const [mmStr, ddStr] = String(mmdd).split("/");
+          let year = today.getFullYear();
+          const candidate = new Date(year, Number(mmStr) - 1, Number(ddStr));
+          const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          if (candidate < todayMid) year += 1; // rollover
+          const iso = `${year}-${String(mmStr).padStart(2, "0")}-${String(ddStr).padStart(2, "0")}`;
+          domainIsoSet.add(iso);
+          localMap[String(mmdd)] = iso;
+        }
+        setMmddIsoMap(localMap);
+
+        // weekend shading computed immediately
+        const weekendRanges = (() => {
+          const out: { startMMDD: string; endMMDD: string; label: string }[] = [];
+          let runStart: string | null = null;
+          let prevIdx = -1;
+          for (let i = 0; i < domainMMDD.length; i++) {
+            const mmdd = domainMMDD[i];
+            const iso = localMap[mmdd];
+            if (!iso) continue;
+            const [y, m, d] = iso.split("-").map((s) => Number(s));
+            const dow = new Date(y, m - 1, d).getDay();
+            const isWeekend = (dow === 0 || dow === 6);
+            if (isWeekend) {
+              if (runStart == null) { runStart = mmdd; prevIdx = i; }
+              else if (i !== prevIdx + 1) { out.push({ startMMDD: runStart, endMMDD: domainMMDD[prevIdx], label: "주말" }); runStart = mmdd; }
+              prevIdx = i;
+            } else if (runStart != null) {
+              out.push({ startMMDD: runStart, endMMDD: domainMMDD[prevIdx], label: "주말" });
+              runStart = null;
+            }
+          }
+        if (runStart != null) out.push({ startMMDD: runStart, endMMDD: domainMMDD[prevIdx], label: "주말" });
+          return out;
+        })();
+        setHolidayRanges(weekendRanges as any);
+
+        // fetch public holidays and merge
+        let mmddRanges: ReturnType<typeof buildHolidayRangesForDomain> = [];
+        try {
+          const r = await fetch(`/api/kr-holidays?years=${years.join(',')}`);
+          if (r.ok) {
+            const json = await r.json();
+            const customRanges: HolidayRangeIso[] = Array.isArray(json?.ranges) ? json.ranges : [];
+            mmddRanges = buildHolidayRangesForDomain({ domainMMDD, years, customIsoRanges: customRanges, domainIsoSet });
+          }
+        } catch {}
+        setHolidayRanges([...(weekendRanges as any), ...mmddRanges]);
+      } catch {}
+    })();
+  }, [JSON.stringify(domainMMDD)]);
 
   return (
     <div className="w-full h-[300px]">
