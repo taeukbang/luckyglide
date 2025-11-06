@@ -43,7 +43,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
   };
 
   // ---- Holidays (background shading) ----
-  const domainMMDD = Array.isArray(data) ? data.map((d) => String(d.date)) : [];
+  const domainMMDD = Array.isArray(chartData) ? chartData.map((d: any) => String(d.date)) : [];
   const [holidayRanges, setHolidayRanges] = useState(() => [] as ReturnType<typeof buildHolidayRangesForDomain>);
   const [mmddIsoMap, setMmddIsoMap] = useState({} as Record<string, string>);
   useEffect(() => {
@@ -159,8 +159,51 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     );
   };
 
-  const minPoint = (data && data.length)
-    ? data.reduce((acc, cur) => (cur.price < acc.price ? cur : acc))
+  // ---- Build continuous domain (fill missing days with price: null) ----
+  const buildFilled = () => {
+    const raw = Array.isArray(data) ? data : [];
+    if (!raw.length) return { domain: [] as string[], rows: [] as { date: string; price: number | null }[] };
+    const startMMDD = String(raw[0].date);
+    const endMMDD = String(raw[raw.length - 1].date);
+    const today = new Date();
+    const [smm, sdd] = startMMDD.split("/");
+    let year = today.getFullYear();
+    const candidate = new Date(year, Number(smm) - 1, Number(sdd));
+    const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (candidate < todayMid) year += 1; // rollover to next year
+    const cur = new Date(year, Number(smm) - 1, Number(sdd));
+
+    const domain: string[] = [];
+    const rows: { date: string; price: number | null }[] = [];
+    let ptr = 0;
+    for (let i = 0; i < 370; i++) {
+      const mm = String(cur.getMonth() + 1).padStart(2, "0");
+      const dd = String(cur.getDate()).padStart(2, "0");
+      const mmdd = `${mm}/${dd}`;
+      domain.push(mmdd);
+      let price: number | null = null;
+      if (ptr < raw.length && String(raw[ptr].date) === mmdd) {
+        const p = Number((raw[ptr] as any).price);
+        price = Number.isFinite(p) ? p : null;
+        ptr++;
+      }
+      rows.push({ date: mmdd, price });
+      if (mmdd === endMMDD && (i > 0 || startMMDD === endMMDD)) break;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return { domain, rows };
+  };
+
+  const filled = buildFilled();
+  const domainMMDD = filled.domain.length ? filled.domain : (Array.isArray(data) ? data.map((d) => String(d.date)) : []);
+  const chartData = filled.rows.length ? filled.rows : (Array.isArray(data) ? data : []);
+
+  const minPoint = (chartData && chartData.length)
+    ? chartData.reduce((acc: any, cur: any) => {
+        if (cur.price === null || cur.price === undefined || Number.isNaN(Number(cur.price))) return acc;
+        if (!acc || Number(cur.price) < Number(acc.price)) return cur;
+        return acc;
+      }, null as any)
     : null as any;
 
   const CustomDot = (props: any) => {
@@ -176,7 +219,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     <div className="w-full h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
-          data={data}
+          data={chartData}
           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
           onMouseMove={(state: any) => {
             if (!state || locked) return;
@@ -233,7 +276,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
                 }
               : {})}
           />
-          <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2} dot={<CustomDot />} />
+          <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2} dot={<CustomDot />} connectNulls={false} />
           {minPoint ? (
             <ReferenceDot x={minPoint.date} y={minPoint.price} r={8} fill="transparent" stroke="#ef4444" strokeWidth={2} />
           ) : null}
