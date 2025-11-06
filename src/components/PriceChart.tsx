@@ -144,8 +144,10 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
 
   const CustomDot = (props: any) => {
     const { cx, cy, payload, value } = props;
-    const val = Number(payload?.price ?? value);
-    if (!Number.isFinite(val)) return null; // skip null/NaN points so they don't draw at chart top
+    const raw = (payload && Object.prototype.hasOwnProperty.call(payload, 'price')) ? payload.price : value;
+    if (raw === null || raw === undefined) return null; // strictly skip null/undefined
+    const val = Number(raw);
+    if (!Number.isFinite(val)) return null; // skip NaN/Infinity
     const isMin = !!(minPoint && payload?.date === minPoint.date && Number(payload?.price) === Number(minPoint.price));
     const r = isMin ? 6 : 2;
     const fill = isMin ? "#ef4444" : "#3b82f6";
