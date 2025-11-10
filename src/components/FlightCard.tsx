@@ -1,6 +1,6 @@
 import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl, codeToCountry } from "@/lib/flags";
 import { Card, CardContent } from "@/components/ui/card";
-import { buildMrtBookingUrl } from "@/lib/utils";
+import { buildMrtBookingUrl, weekdayKo } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
 import { Button } from "@/components/ui/button";
 import { Sparkline } from "./Sparkline";
@@ -80,6 +80,44 @@ export const FlightCard = ({
       return null;
     }
   };
+  const formatTravelDatesWithWeekday = (range: string) => {
+    if (!range) return range;
+    const hasTilde = range.includes("~");
+    const hasHyphen = !hasTilde && range.includes("-");
+    const sep = hasTilde ? "~" : hasHyphen ? "-" : "~";
+    const [aRaw, bRaw] = range.split(sep);
+    const normalize = (s?: string) => (s || "").trim();
+    const a = normalize(aRaw);
+    const b = normalize(bRaw);
+    const fmt = (token: string) => {
+      if (!token) return token;
+      // ISO YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(token)) {
+        const d = new Date(token);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const da = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${da}(${weekdayKo(d)})`;
+      }
+      // M/D or MM/DD
+      if (/^\d{1,2}\/\d{1,2}$/.test(token)) {
+        const [mmStr, ddStr] = token.split("/");
+        const today = new Date();
+        let year = today.getFullYear();
+        const candidate = new Date(year, Number(mmStr) - 1, Number(ddStr));
+        // 연말 롤오버 케이스 보정: 과거면 다음 해로
+        if (candidate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+          year += 1;
+        }
+        const d = new Date(year, Number(mmStr) - 1, Number(ddStr));
+        return `${Number(mmStr)}/${Number(ddStr)}(${weekdayKo(d)})`;
+      }
+      return token;
+    };
+    const left = fmt(a);
+    const right = fmt(b || a);
+    return `${left}${sep}${right}`;
+  };
   return (
     <Card 
       className={`group cursor-pointer transition-all duration-200 hover:shadow-md border-gray-200 ${justRefreshed ? 'lg-flash-outline' : ''}`}
@@ -135,7 +173,7 @@ export const FlightCard = ({
               <span className="text-sm text-gray-500">원</span>
             </div>
             <span className="text-xs text-gray-500 leading-tight mt-1">
-              {travelDates}{meta?.tripDays ? `, ${meta.tripDays}일` : ""}
+              {formatTravelDatesWithWeekday(travelDates)}{meta?.tripDays ? `, ${meta.tripDays}일` : ""}
             </span>
             {formatCollected(collectedAt) ? (
               <span className="text-[10px] text-gray-400 leading-tight mt-0.5">수집 {formatCollected(collectedAt)}</span>

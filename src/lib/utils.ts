@@ -83,3 +83,10 @@ export function addDaysIsoKST(iso: string, days: number) {
   const da = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${da}`;
 }
+
+// 요일(한글 약칭) 반환
+export function weekdayKo(d: Date): string {
+  const names = ["일", "월", "화", "수", "목", "금", "토"];
+  const idx = d.getDay();
+  return names[idx] ?? "";
+}
