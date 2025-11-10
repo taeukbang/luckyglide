@@ -1,6 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceArea, ReferenceLine } from "recharts";
 import { useEffect, useRef, useState } from "react";
-import { buildMrtBookingUrl, addDaysIsoKST } from "@/lib/utils";
+import { buildMrtBookingUrl, addDaysIsoKST, weekdayKo } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
 import { buildHolidayRangesForDomain, HolidayRangeIso } from "@/lib/holidays";
 
@@ -107,6 +107,28 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     })();
   }, [JSON.stringify(domainMMDD)]);
 
+  const formatMMDDWithWeekdayLabel = (mmdd: string) => {
+    try {
+      const iso = mmddIsoMap[String(mmdd)];
+      let d: Date;
+      if (iso) {
+        d = new Date(iso);
+      } else {
+        const [mmStr, ddStr] = String(mmdd).split("/");
+        const today = new Date();
+        let year = today.getFullYear();
+        const candidate = new Date(year, Number(mmStr) - 1, Number(ddStr));
+        if (candidate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+          year += 1;
+        }
+        d = new Date(year, Number(mmStr) - 1, Number(ddStr));
+      }
+      return `${mmdd}(${weekdayKo(d)})`;
+    } catch {
+      return String(mmdd);
+    }
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     const effectiveActive = locked ? true : active;
     const effectiveLabel = locked && lockedPoint ? lockedPoint.label : label;
@@ -137,8 +159,8 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
       : null;
     return (
       <div style={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, padding: 8 }}>
-        <div style={{ color: "hsl(var(--foreground))", fontSize: 12 }}>출발일: {toMMDD(dep)}</div>
-        <div style={{ color: "hsl(var(--foreground))", fontSize: 12 }}>도착일: {toMMDD(arr)}</div>
+        <div style={{ color: "hsl(var(--foreground))", fontSize: 12 }}>출발일: {toMMDD(dep)}({weekdayKo(dep)})</div>
+        <div style={{ color: "hsl(var(--foreground))", fontSize: 12 }}>도착일: {toMMDD(arr)}({weekdayKo(arr)})</div>
         <div style={{ color: "hsl(var(--foreground))", fontSize: 12, marginTop: 4 }}>가격: ₩{price.toLocaleString()}</div>
         {bookingUrl ? (
           <div style={{ marginTop: 8 }}>
@@ -214,6 +236,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
             dataKey="date"
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
             stroke="hsl(var(--border))"
+          tickFormatter={(value) => formatMMDDWithWeekdayLabel(String(value))}
           />
           <YAxis
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
