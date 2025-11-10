@@ -169,7 +169,7 @@ export const FlightCard = ({
                 // 링크는 카드에 표시된 스캔값(출발/복귀일)을 그대로 사용
                 const retIso = retIsoRaw?.trim() || depIso;
                 const url = buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso }, { nonstop: Boolean(nonstop) });
-                return url;
+                return url + "&utm_source=luckyglide";
               })()}
               target="_blank"
               rel="noreferrer"

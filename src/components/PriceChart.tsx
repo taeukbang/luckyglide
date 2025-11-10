@@ -69,7 +69,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     const depIso = toIso(dep);
     const retIso = addDaysIsoKST(depIso, len - 1);
     const bookingUrl = (bookingToCode && bookingToNameKo)
-      ? buildMrtBookingUrl({ from: bookingFromCode, to: bookingToCode, toNameKo: bookingToNameKo, fromNameKo: "인천", depdt: depIso, rtndt: retIso }, { nonstop: !!nonstop })
+      ? buildMrtBookingUrl({ from: bookingFromCode, to: bookingToCode, toNameKo: bookingToNameKo, fromNameKo: "인천", depdt: depIso, rtndt: retIso }, { nonstop: !!nonstop }) + "&utm_source=luckyglide"
       : null;
     return (
       <div style={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, padding: 8 }}>
