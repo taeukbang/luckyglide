@@ -217,7 +217,7 @@ export default function Verify() {
             {cardInfo?.departureDate && cardInfo?.returnDate && (
               <a
                 href={buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: selectedCode, toNameKo: destinations.find(d=>d.code===selectedCode)?.nameKo || selectedCode, depdt: cardInfo.departureDate, rtndt: cardInfo.returnDate }, { nonstop: true }) + "&utm_source=luckyglide"}
-                target="_blank" rel="noreferrer"
+                target="_blank"
               >
                 <Button size="sm" className="mt-2 w-full">예약(카드 최저가)</Button>
               </a>
@@ -267,7 +267,7 @@ export default function Verify() {
                   const retIso = addDays(depIso, Math.max(1, tripDays) - 1);
                   return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: selectedCode, toNameKo: destinations.find(d=>d.code===selectedCode)?.nameKo || selectedCode, depdt: depIso, rtndt: retIso }, { nonstop: true }) + "&utm_source=luckyglide";
                 })()}
-                target="_blank" rel="noreferrer"
+                target="_blank"
               >
                 <Button size="sm" className="w-full">예약(그래프 최저가)</Button>
               </a>

@@ -172,7 +172,6 @@ export const FlightCard = ({
                 return url + "&utm_source=luckyglide";
               })()}
               target="_blank"
-              rel="noreferrer"
               onClick={(e)=>{
                 const [depIso, retIsoRaw] = travelDates.split("~");
                 const retIso = retIsoRaw?.trim() || depIso;

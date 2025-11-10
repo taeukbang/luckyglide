@@ -203,7 +203,6 @@ export const FlightDetailDialog = ({
                 return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso }, { nonstop: Boolean(nonstop) }) + "&utm_source=luckyglide";
               })()}
               target="_blank"
-              rel="noreferrer"
               onClick={(e)=>{
                 // 동일 로직으로 dep/ret 추출해 이벤트 보냄
                 const best = (priceData || []).reduce<{date?: string; price?: number}>((acc, cur) => {

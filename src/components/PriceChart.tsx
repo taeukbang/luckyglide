@@ -78,7 +78,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
         <div style={{ color: "hsl(var(--foreground))", fontSize: 12, marginTop: 4 }}>가격: ₩{price.toLocaleString()}</div>
         {bookingUrl ? (
           <div style={{ marginTop: 8 }}>
-            <a href={bookingUrl} target="_blank" rel="noreferrer" onClick={()=>{
+            <a href={bookingUrl} target="_blank" onClick={()=>{
               gaEvent('click_graph', { code: bookingToCode, city: bookingToNameKo, depdt: depIso, rtndt: retIso, nonstop: !!nonstop, price });
             }} style={{
               display: "inline-block",
