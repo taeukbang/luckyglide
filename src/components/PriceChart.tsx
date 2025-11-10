@@ -280,7 +280,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
                 }
               : {})}
           />
-          <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2} dot={<CustomDot />} connectNulls={false} />
+          <Line type="monotone" dataKey="price" stroke="#3b82f6" strokeWidth={2} dot={<CustomDot />} connectNulls />
           {minPoint ? (
             <ReferenceDot x={minPoint.date} y={minPoint.price} r={8} fill="transparent" stroke="#ef4444" strokeWidth={2} />
           ) : null}
