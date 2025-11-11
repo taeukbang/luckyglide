@@ -164,7 +164,7 @@ export const FlightCard = ({
             <div className="flex items-baseline gap-1.5">
               {meta && (meta as any).isGood ? (
                 <span className="text-[10px] font-semibold text-red-500 self-start mt-0.5">
-                  특가
+                  좋은 가격
                 </span>
               ) : null}
               <div className="text-2xl font-bold text-gray-900 leading-tight">

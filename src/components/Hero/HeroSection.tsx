@@ -26,7 +26,7 @@ export function HeroSection({ onContinentClick }: HeroSectionProps) {
           
           {/* 서브타이틀 - 회색, 문구 축약 */}
           <p className="text-sm text-gray-600 mb-4">
-            여행지의 항공권 최저가 일정을 검색해보세요
+            일정과 가격을 먼저 보고 여행지를 골라보세요.
           </p>
           
           {/* 인기 지역 - 미니멀 칩 */}
