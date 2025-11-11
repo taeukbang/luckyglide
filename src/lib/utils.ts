@@ -11,6 +11,20 @@ export function isMobileUA() {
   return /Android|iPhone|iPad|iPod|Mobile|SamsungBrowser/i.test(navigator.userAgent);
 }
 
+// 마이리얼트립 앱(인앱브라우저) UA 식별
+export function isMrtAppUA() {
+  try {
+    if (typeof navigator === 'undefined') return false;
+    const ua = String(navigator.userAgent || '').toLowerCase();
+    // 실제 앱 UA 토큰에 맞춰 보완 가능
+    const hasBrand = /myrealtrip|myrealtripapp|mrtapp/.test(ua);
+    const isAndroidWV = /\bwv\b/.test(ua);
+    return hasBrand || (isAndroidWV && /myrealtrip/.test(ua));
+  } catch {
+    return false;
+  }
+}
+
 export function buildMrtBookingUrl(
   params: { from: string; fromNameKo?: string; to: string; toNameKo: string; depdt: string; rtndt: string; adt?: number; chd?: number; inf?: number; cabin?: string },
   opts?: { mobile?: boolean; nonstop?: boolean }
@@ -79,8 +93,8 @@ export function applyMrtDeepLinkIfNeeded(webUrl: string) {
     const raw = getStatusFromLocation();
     const norm = String(raw || '').toLowerCase().trim().replace(/\/+$/, '');
     if (norm === 'mrt_app') {
-      // PC(데스크톱)에서는 딥링크 미적용, 모바일 UA에서만 적용
-      if (!isMobileUA()) return webUrl;
+      // PC(데스크톱) 또는 모바일 웹 브라우저는 웹 링크 유지
+      if (!isMobileUA() || !isMrtAppUA()) return webUrl;
       return `mrt://flights?url=${encodeURIComponent(webUrl)}`;
     }
   } catch {}
