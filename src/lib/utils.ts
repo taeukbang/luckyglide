@@ -79,6 +79,8 @@ export function applyMrtDeepLinkIfNeeded(webUrl: string) {
     const raw = getStatusFromLocation();
     const norm = String(raw || '').toLowerCase().trim().replace(/\/+$/, '');
     if (norm === 'mrt_app') {
+      // PC(데스크톱)에서는 딥링크 미적용, 모바일 UA에서만 적용
+      if (!isMobileUA()) return webUrl;
       return `mrt://flights?url=${encodeURIComponent(webUrl)}`;
     }
   } catch {}
