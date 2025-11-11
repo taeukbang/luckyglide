@@ -62,8 +62,23 @@ export function buildMrtBookingUrl(
 export function applyMrtDeepLinkIfNeeded(webUrl: string) {
   try {
     if (typeof window === 'undefined') return webUrl;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('status') === 'mrt_app') {
+    const getStatusFromLocation = () => {
+      const qsVal = new URLSearchParams(window.location.search).get('status');
+      if (qsVal) return qsVal;
+      const hash = window.location.hash || '';
+      const key = 'status=';
+      const idx = hash.indexOf(key);
+      if (idx >= 0) {
+        const sub = hash.slice(idx + key.length);
+        const end = sub.indexOf('&');
+        const raw = end >= 0 ? sub.slice(0, end) : sub;
+        try { return decodeURIComponent(raw); } catch { return raw; }
+      }
+      return null;
+    };
+    const raw = getStatusFromLocation();
+    const norm = String(raw || '').toLowerCase().trim().replace(/\/+$/, '');
+    if (norm === 'mrt_app') {
       return `mrt://flights?url=${encodeURIComponent(webUrl)}`;
     }
   } catch {}
