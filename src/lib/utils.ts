@@ -58,6 +58,18 @@ export function buildMrtBookingUrl(
   return built.includes("KSESID=") ? built : `${built}&KSESID=${encodeURIComponent(MRT_KSESID)}`;
 }
 
+// MyRealTrip 앱 내 인앱브라우저로 접속한 경우(status=mrt_app) 웹 링크를 딥링크로 변환
+export function applyMrtDeepLinkIfNeeded(webUrl: string) {
+  try {
+    if (typeof window === 'undefined') return webUrl;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('status') === 'mrt_app') {
+      return `mrt://flights?url=${encodeURIComponent(webUrl)}`;
+    }
+  } catch {}
+  return webUrl;
+}
+
 // Timezone-safe ISO date add (treat input as UTC calendar date)
 export function addDaysIsoUTC(iso: string, days: number) {
   const [yy, mm, dd] = iso.split("-").map((s) => Number(s));

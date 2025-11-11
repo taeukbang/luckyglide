@@ -16,7 +16,7 @@ import {
 import { PriceChart } from "./PriceChart";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
-import { buildMrtBookingUrl, addDaysIsoKST } from "@/lib/utils";
+import { buildMrtBookingUrl, addDaysIsoKST, applyMrtDeepLinkIfNeeded } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
 import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@/lib/flags";
 
@@ -200,7 +200,8 @@ export const FlightDetailDialog = ({
                 // 3) 복귀일 = 출발일 + (tripDays-1) — UTC 기준 덧셈으로 변환 오프셋 방지
                 const days = parseInt(tripDuration, 10) || 3;
                 const retIso = addDaysIsoKST(depIso, days - 1);
-                return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso }, { nonstop: Boolean(nonstop) }) + "&utm_source=luckyglide";
+                const webUrl = buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: code, toNameKo: city, depdt: depIso, rtndt: retIso }, { nonstop: Boolean(nonstop) }) + "&utm_source=luckyglide";
+                return applyMrtDeepLinkIfNeeded(webUrl);
               })()}
               target="_blank"
               onClick={(e)=>{
