@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PriceChart } from "@/components/PriceChart";
-import { buildMrtBookingUrl } from "@/lib/utils";
+import { buildMrtBookingUrl, applyMrtDeepLinkIfNeeded } from "@/lib/utils";
 
 // 카드 목록에서 사용하는 목적지 목록 API 타입과 동일하게 맞춤
 type Destination = { code: string; nameKo: string; region: string };
@@ -216,7 +216,7 @@ export default function Verify() {
             </div>
             {cardInfo?.departureDate && cardInfo?.returnDate && (
               <a
-                href={buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: selectedCode, toNameKo: destinations.find(d=>d.code===selectedCode)?.nameKo || selectedCode, depdt: cardInfo.departureDate, rtndt: cardInfo.returnDate }, { nonstop: true }) + "&utm_source=luckyglide"}
+                href={applyMrtDeepLinkIfNeeded(buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: selectedCode, toNameKo: destinations.find(d=>d.code===selectedCode)?.nameKo || selectedCode, depdt: cardInfo.departureDate, rtndt: cardInfo.returnDate }, { nonstop: true }) + "&utm_source=luckyglide")}
                 target="_blank"
               >
                 <Button size="sm" className="mt-2 w-full">예약(카드 최저가)</Button>
@@ -265,7 +265,7 @@ export default function Verify() {
                     return `${y}-${m}-${da}`;
                   };
                   const retIso = addDays(depIso, Math.max(1, tripDays) - 1);
-                  return buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: selectedCode, toNameKo: destinations.find(d=>d.code===selectedCode)?.nameKo || selectedCode, depdt: depIso, rtndt: retIso }, { nonstop: true }) + "&utm_source=luckyglide";
+                  return applyMrtDeepLinkIfNeeded(buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: selectedCode, toNameKo: destinations.find(d=>d.code===selectedCode)?.nameKo || selectedCode, depdt: depIso, rtndt: retIso }, { nonstop: true }) + "&utm_source=luckyglide");
                 })()}
                 target="_blank"
               >
