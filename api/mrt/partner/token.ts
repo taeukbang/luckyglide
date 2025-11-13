@@ -39,12 +39,37 @@ async function refreshAccessToken(): Promise<{ token: string; exp: number | null
     throw new Error(`Partner refresh error: ${r.status} ${text}`);
   }
   const data = await r.json().catch(() => ({}));
-  const token = data?.data?.accessToken as string | undefined;
+  const token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
   if (!token) throw new Error("Partner refresh error: accessToken missing");
   const exp = decodeJwtExp(token);
   ACCESS_TOKEN = token;
   ACCESS_EXP = exp;
   return { token, exp };
+}
+
+async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string }> {
+  const refreshToken = process.env.MRT_PARTNER_REFRESH_TOKEN;
+  if (!refreshToken) throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
+  const url = "https://api3.myrealtrip.com/authentication/v3/partner/token/refresh";
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+  const text = await r.text().catch(() => "");
+  try {
+    const data = JSON.parse(text);
+    const token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
+    if (token) {
+      const exp = decodeJwtExp(token);
+      ACCESS_TOKEN = token;
+      ACCESS_EXP = exp;
+      return { token, exp, upstreamStatus: r.status, upstreamBody: text.slice(0, 4000) };
+    }
+    return { upstreamStatus: r.status, upstreamBody: text.slice(0, 4000) };
+  } catch {
+    return { upstreamStatus: r.status, upstreamBody: text.slice(0, 4000) };
+  }
 }
 
 async function ensureAccessToken(): Promise<string> {
@@ -63,16 +88,32 @@ export default async function handler(req: Request): Promise<Response> {
     if (!process.env.MRT_PARTNER_REFRESH_TOKEN) {
       return json({ ok: false, error: "MRT_PARTNER_REFRESH_TOKEN missing" }, 500);
     }
-    const token = await ensureAccessToken();
-    const exp = ACCESS_EXP ?? null;
-    const nowSec = Math.floor(Date.now() / 1000);
-    const expiresInSec = exp ? Math.max(0, exp - nowSec) : null;
-    return json({
-      ok: true,
-      exp,
-      expiresInSec,
-      preview: token.slice(0, 12) + "...",
-    });
+    const { searchParams } = new URL(req.url);
+    const debug = searchParams.get("debug") === "1" || searchParams.get("refresh") === "1";
+    if (debug) {
+      const r = await refreshAccessTokenWithRaw();
+      const nowSec = Math.floor(Date.now() / 1000);
+      const exp = r.exp ?? ACCESS_EXP ?? null;
+      const expiresInSec = exp ? Math.max(0, exp - nowSec) : null;
+      return json({
+        ok: !!r.token,
+        exp,
+        expiresInSec,
+        preview: r.token ? r.token.slice(0, 12) + "..." : null,
+        upstream: { status: r.upstreamStatus, body: r.upstreamBody },
+      });
+    } else {
+      const token = await ensureAccessToken();
+      const exp = ACCESS_EXP ?? null;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const expiresInSec = exp ? Math.max(0, exp - nowSec) : null;
+      return json({
+        ok: true,
+        exp,
+        expiresInSec,
+        preview: token.slice(0, 12) + "...",
+      });
+    }
   } catch (e: any) {
     return json({ ok: false, error: e?.message ?? "internal error" }, 500);
   }

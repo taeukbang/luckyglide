@@ -47,12 +47,39 @@ async function refreshPartnerAccessToken(): Promise<{ token: string; exp: number
     throw new Error(`Partner refresh error: ${res.status} ${text}`);
   }
   const data = await res.json().catch(() => ({}));
-  const token = data?.data?.accessToken as string | undefined;
+  // Some environments may return accessToken at root-level or under data
+  const token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
   if (!token) throw new Error("Partner refresh error: accessToken missing");
   const exp = decodeJwtExp(token);
   MRT_PARTNER_ACCESS_TOKEN = token;
   MRT_PARTNER_ACCESS_EXP = exp;
   return { token, exp };
+}
+
+async function refreshPartnerAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string }> {
+  const refreshToken = process.env.MRT_PARTNER_REFRESH_TOKEN;
+  if (!refreshToken) {
+    throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
+  }
+  const url = "https://api3.myrealtrip.com/authentication/v3/partner/token/refresh";
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+  const text = await res.text().catch(() => "");
+  let token: string | undefined;
+  try {
+    const data = JSON.parse(text);
+    token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
+    if (token) {
+      const exp = decodeJwtExp(token);
+      MRT_PARTNER_ACCESS_TOKEN = token;
+      MRT_PARTNER_ACCESS_EXP = exp;
+      return { token, exp, upstreamStatus: res.status, upstreamBody: text.slice(0, 4000) };
+    }
+  } catch {}
+  return { upstreamStatus: res.status, upstreamBody: text.slice(0, 4000) };
 }
 
 async function ensurePartnerAccessToken(): Promise<string> {
@@ -72,17 +99,32 @@ app.get("/api/mrt/partner/token", async (req, res) => {
     if (!process.env.MRT_PARTNER_REFRESH_TOKEN) {
       return res.status(500).json({ ok: false, error: "MRT_PARTNER_REFRESH_TOKEN missing" });
     }
-    const token = await ensurePartnerAccessToken();
-    const exp = MRT_PARTNER_ACCESS_EXP ?? null;
-    const nowSec = Math.floor(Date.now() / 1000);
-    const expiresInSec = exp ? Math.max(0, exp - nowSec) : null;
-    res.json({
-      ok: true,
-      exp,
-      expiresInSec,
-      // reveal only short prefix for debug
-      preview: token.slice(0, 12) + "...",
-    });
+    const debug = String(req.query.debug ?? "") === "1" || String(req.query.refresh ?? "") === "1";
+    if (debug) {
+      const r = await refreshPartnerAccessTokenWithRaw();
+      const nowSec = Math.floor(Date.now() / 1000);
+      const exp = r.exp ?? MRT_PARTNER_ACCESS_EXP ?? null;
+      const expiresInSec = exp ? Math.max(0, exp - nowSec) : null;
+      return res.json({
+        ok: !!r.token,
+        exp,
+        expiresInSec,
+        preview: r.token ? r.token.slice(0, 12) + "..." : null,
+        upstream: { status: r.upstreamStatus, body: r.upstreamBody },
+      });
+    } else {
+      const token = await ensurePartnerAccessToken();
+      const exp = MRT_PARTNER_ACCESS_EXP ?? null;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const expiresInSec = exp ? Math.max(0, exp - nowSec) : null;
+      res.json({
+        ok: true,
+        exp,
+        expiresInSec,
+        // reveal only short prefix for debug
+        preview: token.slice(0, 12) + "...",
+      });
+    }
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e?.message ?? "internal error" });
   }

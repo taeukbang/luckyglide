@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function MrtPartnerTest() {
-  const [tokenStatus, setTokenStatus] = useState<null | { ok: boolean; exp?: number | null; expiresInSec?: number | null; preview?: string; error?: string }>(null);
+  const [tokenStatus, setTokenStatus] = useState<null | { ok: boolean; exp?: number | null; expiresInSec?: number | null; preview?: string | null; error?: string; upstream?: { status: number; body: string } }>(null);
   const [loadingToken, setLoadingToken] = useState(false);
 
   const [depAirportCd, setDepAirportCd] = useState("ICN");
@@ -32,6 +32,20 @@ export default function MrtPartnerTest() {
     }
   };
 
+  const requestTokenDebug = async () => {
+    try {
+      setLoadingToken(true);
+      setError(null);
+      const res = await fetch("/api/mrt/partner/token?debug=1&refresh=1");
+      const json = await res.json();
+      setTokenStatus(json);
+    } catch (e: any) {
+      setTokenStatus({ ok: false, error: e?.message ?? "error" });
+    } finally {
+      setLoadingToken(false);
+    }
+  };
+
   const requestLanding = async () => {
     try {
       setLoadingLanding(true);
@@ -45,7 +59,7 @@ export default function MrtPartnerTest() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(String(json?.error || `HTTP ${res.status}`));
+        setError(String(json?.error || `HTTP ${res.status}`) + (json?.body ? `\n${json.body}` : ""));
         return;
       }
       const url = json?.data?.url as string | undefined;
@@ -75,7 +89,10 @@ export default function MrtPartnerTest() {
           <CardContent className="p-4 space-y-3">
             <h3 className="font-semibold">Step 1. 액세스 토큰 발급</h3>
             <p className="text-sm text-muted-foreground">서버의 환경변수 MRT_PARTNER_REFRESH_TOKEN을 사용합니다.</p>
-            <Button size="sm" onClick={requestToken} disabled={loadingToken}>{loadingToken ? "발급 중…" : "발급/확인"}</Button>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={requestToken} disabled={loadingToken}>{loadingToken ? "발급 중…" : "발급/확인"}</Button>
+              <Button size="sm" variant="outline" onClick={requestTokenDebug} disabled={loadingToken}>{loadingToken ? "발급 중…" : "디버그 새로발급"}</Button>
+            </div>
             {tokenStatus ? (
               <div className="text-sm">
                 <div>ok: {String(tokenStatus.ok)}</div>
@@ -83,6 +100,16 @@ export default function MrtPartnerTest() {
                 {"preview" in tokenStatus && tokenStatus.preview ? <div>preview: {tokenStatus.preview}</div> : null}
                 {"expiresInSec" in tokenStatus ? <div>expiresInSec: {tokenStatus.expiresInSec ?? "-"}</div> : null}
                 {"exp" in tokenStatus ? <div>exp: {tokenStatus.exp ?? "-"}</div> : null}
+                {"upstream" in tokenStatus && tokenStatus.upstream ? (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer">업스트림 응답 보기</summary>
+                    <div className="text-xs mt-1 whitespace-pre-wrap break-all border rounded p-2">
+                      status: {tokenStatus.upstream.status}
+                      {"\n"}
+                      {tokenStatus.upstream.body}
+                    </div>
+                  </details>
+                ) : null}
               </div>
             ) : null}
           </CardContent>
