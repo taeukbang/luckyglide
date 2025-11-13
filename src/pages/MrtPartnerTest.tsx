@@ -9,6 +9,7 @@ export default function MrtPartnerTest() {
   const [loadingToken, setLoadingToken] = useState(false);
   const [envStatus, setEnvStatus] = useState<null | { ok: boolean; runtime?: string; hasRefreshToken?: boolean; refreshTokenLen?: number; hasClientId?: boolean; clientIdLen?: number; error?: string }>(null);
   const [loadingEnv, setLoadingEnv] = useState(false);
+  const [attempts, setAttempts] = useState<any[] | null>(null);
 
   const [depAirportCd, setDepAirportCd] = useState("ICN");
   const [arrAirportCd, setArrAirportCd] = useState("BKK");
@@ -41,8 +42,10 @@ export default function MrtPartnerTest() {
       const res = await fetch("/api/mrt/partner/token?debug=1&refresh=1");
       const json = await res.json();
       setTokenStatus(json);
+      setAttempts(Array.isArray(json?.attempts) ? json.attempts : null);
     } catch (e: any) {
       setTokenStatus({ ok: false, error: e?.message ?? "error" });
+      setAttempts(null);
     } finally {
       setLoadingToken(false);
     }
@@ -138,6 +141,20 @@ export default function MrtPartnerTest() {
                   <div className="text-xs text-muted-foreground mt-1">
                     payloadUsed: {(tokenStatus as any).meta.payloadUsed ?? "-"}, clientIdIncluded: {String((tokenStatus as any).meta.clientIdIncluded ?? false)}
                   </div>
+                ) : null}
+                {attempts && attempts.length ? (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer">시도 상세 보기</summary>
+                    <div className="text-xs mt-1 space-y-2">
+                      {attempts.map((a: any, i: number) => (
+                        <div key={i} className="border rounded p-2 whitespace-pre-wrap break-all">
+                          attempt #{i+1}: payloadUsed={a.payloadUsed}, clientIdIncluded={String(a.clientIdIncluded)}, status={a.status}, ok={String(a.ok)}
+                          {"\n"}
+                          {a.body}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
                 ) : null}
                 {"upstream" in tokenStatus && tokenStatus.upstream ? (
                   <details className="mt-2">

@@ -59,41 +59,55 @@ async function refreshAccessToken(): Promise<{ token: string; exp: number | null
   return { token, exp };
 }
 
-async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string; payloadUsed?: "refreshToken" | "refresh_token"; clientIdIncluded?: boolean }> {
+type AttemptResult = {
+  payloadUsed: "refreshToken" | "refresh_token";
+  clientIdIncluded: boolean;
+  status: number;
+  body: string;
+  ok: boolean;
+  token?: string;
+  exp?: number | null;
+};
+
+async function doAttempt(url: string, payload: any, used: AttemptResult["payloadUsed"], incl: boolean): Promise<AttemptResult> {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=UTF-8", "Accept": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const text = await r.text().catch(() => "");
+  let token: string | undefined;
+  let exp: number | null | undefined;
+  try {
+    const data = JSON.parse(text);
+    token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
+    if (token) exp = decodeJwtExp(token);
+  } catch {}
+  return { payloadUsed: used, clientIdIncluded: incl, status: r.status, body: text.slice(0, 4000), ok: !!token, token, exp: exp ?? null };
+}
+
+async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string; payloadUsed?: "refreshToken" | "refresh_token"; clientIdIncluded?: boolean; attempts: AttemptResult[] }> {
   const refreshToken = (process.env.MRT_PARTNER_REFRESH_TOKEN || "").trim().replace(/^"+|"+$/g, "");
   if (!refreshToken) throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
   const url = "https://api3.myrealtrip.com/authentication/v3/partner/token/refresh";
   const clientId = (process.env.MRT_PARTNER_CLIENT_ID || "").trim();
-  const attempts = [
-    { refreshToken, ...(clientId ? { clientId } : {}) } as const,
-    { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) } as const,
-  ];
-  for (const payload of attempts) {
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const text = await r.text().catch(() => "");
-    try {
-      const data = JSON.parse(text);
-      const token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
-      if (token) {
-        const exp = decodeJwtExp(token);
-        ACCESS_TOKEN = token;
-        ACCESS_EXP = exp;
-        const used = ("refreshToken" in payload) ? "refreshToken" : "refresh_token";
-        const incl = ("clientId" in payload) || ("client_id" in payload);
-        return { token, exp, upstreamStatus: r.status, upstreamBody: text.slice(0, 4000), payloadUsed: used, clientIdIncluded: incl };
-      }
-    } catch {}
-    if (payload === attempts[attempts.length - 1]) {
-      const used = ("refreshToken" in payload) ? "refreshToken" : "refresh_token";
-      const incl = ("clientId" in payload) || ("client_id" in payload);
-      return { upstreamStatus: r.status, upstreamBody: text.slice(0, 4000), payloadUsed: used, clientIdIncluded: incl };
-    }
+  const attempt1Payload = { refreshToken, ...(clientId ? { clientId } : {}) };
+  const attempt2Payload = { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) };
+  const a1 = await doAttempt(url, attempt1Payload, "refreshToken", !!clientId);
+  if (a1.ok && a1.token) {
+    ACCESS_TOKEN = a1.token;
+    ACCESS_EXP = a1.exp ?? null;
+    return { token: a1.token, exp: a1.exp ?? null, upstreamStatus: a1.status, upstreamBody: a1.body, payloadUsed: a1.payloadUsed, clientIdIncluded: a1.clientIdIncluded, attempts: [a1] };
   }
-  return { upstreamStatus: 0, upstreamBody: "no-attempts" };
+  const a2 = await doAttempt(url, attempt2Payload, "refresh_token", !!clientId);
+  if (a2.ok && a2.token) {
+    ACCESS_TOKEN = a2.token;
+    ACCESS_EXP = a2.exp ?? null;
+    return { token: a2.token, exp: a2.exp ?? null, upstreamStatus: a2.status, upstreamBody: a2.body, payloadUsed: a2.payloadUsed, clientIdIncluded: a2.clientIdIncluded, attempts: [a1, a2] };
+  }
+  // Return last attempt info, include attempts array
+  const last = a2;
+  return { upstreamStatus: last.status, upstreamBody: last.body, payloadUsed: last.payloadUsed, clientIdIncluded: last.clientIdIncluded, attempts: [a1, a2] };
 }
 
 async function ensureAccessToken(): Promise<string> {
@@ -126,6 +140,7 @@ export default async function handler(req: Request): Promise<Response> {
         preview: r.token ? r.token.slice(0, 12) + "..." : null,
         upstream: { status: r.upstreamStatus, body: r.upstreamBody },
         meta: { payloadUsed: r.payloadUsed ?? null, clientIdIncluded: r.clientIdIncluded ?? false },
+        attempts: r.attempts ?? [],
       });
     } else {
       const token = await ensureAccessToken();
