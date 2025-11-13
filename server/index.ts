@@ -32,24 +32,36 @@ function decodeJwtExp(token: string): number | null {
 }
 
 async function refreshPartnerAccessToken(): Promise<{ token: string; exp: number | null }> {
-  const refreshToken = process.env.MRT_PARTNER_REFRESH_TOKEN;
+  const refreshToken = (process.env.MRT_PARTNER_REFRESH_TOKEN || "").trim().replace(/^"+|"+$/g, "");
   if (!refreshToken) {
     throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
   }
   const url = "https://api3.myrealtrip.com/authentication/v3/partner/token/refresh";
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Partner refresh error: ${res.status} ${text}`);
+  const clientId = (process.env.MRT_PARTNER_CLIENT_ID || "").trim();
+  // Try preferred payload then fallback to snake_case key
+  const attempts = [
+    { refreshToken, ...(clientId ? { clientId } : {}) },
+    { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) },
+  ];
+  let token: string | undefined;
+  let lastStatus = 0;
+  let lastText = "";
+  for (const payload of attempts) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    lastStatus = res.status;
+    lastText = await res.text().catch(() => "");
+    if (!res.ok) continue;
+    try {
+      const data = JSON.parse(lastText);
+      token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
+      if (token) break;
+    } catch {}
   }
-  const data = await res.json().catch(() => ({}));
-  // Some environments may return accessToken at root-level or under data
-  const token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
-  if (!token) throw new Error("Partner refresh error: accessToken missing");
+  if (!token) throw new Error(`Partner refresh error: accessToken missing (last ${lastStatus} ${lastText?.slice(0, 500)})`);
   const exp = decodeJwtExp(token);
   MRT_PARTNER_ACCESS_TOKEN = token;
   MRT_PARTNER_ACCESS_EXP = exp;
@@ -57,29 +69,40 @@ async function refreshPartnerAccessToken(): Promise<{ token: string; exp: number
 }
 
 async function refreshPartnerAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string }> {
-  const refreshToken = process.env.MRT_PARTNER_REFRESH_TOKEN;
+  const refreshToken = (process.env.MRT_PARTNER_REFRESH_TOKEN || "").trim().replace(/^"+|"+$/g, "");
   if (!refreshToken) {
     throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
   }
   const url = "https://api3.myrealtrip.com/authentication/v3/partner/token/refresh";
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
-  const text = await res.text().catch(() => "");
-  let token: string | undefined;
-  try {
-    const data = JSON.parse(text);
-    token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
-    if (token) {
-      const exp = decodeJwtExp(token);
-      MRT_PARTNER_ACCESS_TOKEN = token;
-      MRT_PARTNER_ACCESS_EXP = exp;
-      return { token, exp, upstreamStatus: res.status, upstreamBody: text.slice(0, 4000) };
+  const clientId = (process.env.MRT_PARTNER_CLIENT_ID || "").trim();
+  const attempts = [
+    { refreshToken, ...(clientId ? { clientId } : {}) },
+    { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) },
+  ];
+  for (const payload of attempts) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text().catch(() => "");
+    try {
+      const data = JSON.parse(text);
+      const token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
+      if (token) {
+        const exp = decodeJwtExp(token);
+        MRT_PARTNER_ACCESS_TOKEN = token;
+        MRT_PARTNER_ACCESS_EXP = exp;
+        return { token, exp, upstreamStatus: res.status, upstreamBody: text.slice(0, 4000) };
+      }
+    } catch {}
+    // if first attempt failed, return last upstream
+    if (payload === attempts[attempts.length - 1]) {
+      return { upstreamStatus: res.status, upstreamBody: text.slice(0, 4000) };
     }
-  } catch {}
-  return { upstreamStatus: res.status, upstreamBody: text.slice(0, 4000) };
+    // else continue loop to next attempt
+  }
+  return { upstreamStatus: 0, upstreamBody: "no-attempts" };
 }
 
 async function ensurePartnerAccessToken(): Promise<string> {
