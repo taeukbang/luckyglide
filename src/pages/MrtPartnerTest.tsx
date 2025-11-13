@@ -10,6 +10,7 @@ export default function MrtPartnerTest() {
   const [envStatus, setEnvStatus] = useState<null | { ok: boolean; runtime?: string; hasRefreshToken?: boolean; refreshTokenLen?: number; hasClientId?: boolean; clientIdLen?: number; error?: string }>(null);
   const [loadingEnv, setLoadingEnv] = useState(false);
   const [attempts, setAttempts] = useState<any[] | null>(null);
+  const [rtOverride, setRtOverride] = useState<string>("");
 
   const [depAirportCd, setDepAirportCd] = useState("ICN");
   const [arrAirportCd, setArrAirportCd] = useState("BKK");
@@ -61,6 +62,26 @@ export default function MrtPartnerTest() {
       setEnvStatus({ ok: false, error: e?.message ?? "error" });
     } finally {
       setLoadingEnv(false);
+    }
+  };
+
+  const requestTokenDebugWithOverride = async () => {
+    try {
+      setLoadingToken(true);
+      setError(null);
+      const res = await fetch("/api/mrt/partner/token?debug=1&refresh=1", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshTokenOverride: rtOverride }),
+      });
+      const json = await res.json();
+      setTokenStatus(json);
+      setAttempts(Array.isArray(json?.attempts) ? json.attempts : null);
+    } catch (e: any) {
+      setTokenStatus({ ok: false, error: e?.message ?? "error" });
+      setAttempts(null);
+    } finally {
+      setLoadingToken(false);
     }
   };
 
@@ -130,6 +151,15 @@ export default function MrtPartnerTest() {
               <Button size="sm" onClick={requestToken} disabled={loadingToken}>{loadingToken ? "발급 중…" : "발급/확인"}</Button>
               <Button size="sm" variant="outline" onClick={requestTokenDebug} disabled={loadingToken}>{loadingToken ? "발급 중…" : "디버그 새로발급"}</Button>
             </div>
+            <div className="space-y-2 pt-2">
+              <div className="text-xs text-muted-foreground">수동 refreshToken 오버라이드(테스트용)</div>
+              <Input value={rtOverride} onChange={(e)=> setRtOverride(e.target.value)} placeholder="여기에 refreshToken 붙여넣기" />
+              <div className="flex gap-2">
+                <Button size="sm" variant="secondary" onClick={requestTokenDebugWithOverride} disabled={loadingToken || !rtOverride.trim()}>
+                  {loadingToken ? "발급 중…" : "디버그(수동 토큰)"}
+                </Button>
+              </div>
+            </div>
             {tokenStatus ? (
               <div className="text-sm">
                 <div>ok: {String(tokenStatus.ok)}</div>
@@ -139,7 +169,7 @@ export default function MrtPartnerTest() {
                 {"exp" in tokenStatus ? <div>exp: {tokenStatus.exp ?? "-"}</div> : null}
                 {"meta" in (tokenStatus as any) && (tokenStatus as any).meta ? (
                   <div className="text-xs text-muted-foreground mt-1">
-                    payloadUsed: {(tokenStatus as any).meta.payloadUsed ?? "-"}, clientIdIncluded: {String((tokenStatus as any).meta.clientIdIncluded ?? false)}
+                    payloadUsed: {(tokenStatus as any).meta.payloadUsed ?? "-"}, clientIdIncluded: {String((tokenStatus as any).meta.clientIdIncluded ?? false)}, usingOverride: {String((tokenStatus as any).meta.usingOverride ?? false)}
                   </div>
                 ) : null}
                 {attempts && attempts.length ? (

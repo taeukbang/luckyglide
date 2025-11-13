@@ -103,8 +103,11 @@ async function doAttemptForm(url: string, form: URLSearchParams, used: AttemptRe
   return { payloadUsed: used, clientIdIncluded: incl, status: r.status, body: text.slice(0, 4000), ok: !!token, token, exp: exp ?? null };
 }
 
-async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string; payloadUsed?: "refreshToken" | "refresh_token"; clientIdIncluded?: boolean; attempts: AttemptResult[] }> {
-  const refreshToken = (process.env.MRT_PARTNER_REFRESH_TOKEN || "").trim().replace(/^"+|"+$/g, "");
+async function refreshAccessTokenWithRaw(input?: { refreshTokenOverride?: string | null }): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string; payloadUsed?: "refreshToken" | "refresh_token"; clientIdIncluded?: boolean; attempts: AttemptResult[]; usingOverride?: boolean }> {
+  const rtEnv = (process.env.MRT_PARTNER_REFRESH_TOKEN || "").trim().replace(/^"+|"+$/g, "");
+  const rtOverride = (input?.refreshTokenOverride || "").trim().replace(/^"+|"+$/g, "");
+  const usingOverride = !!rtOverride;
+  const refreshToken = usingOverride ? rtOverride : rtEnv;
   if (!refreshToken) throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
   const url = "https://api3.myrealtrip.com/authentication/v3/partner/token/refresh";
   const clientId = (process.env.MRT_PARTNER_CLIENT_ID || "").trim();
@@ -114,13 +117,13 @@ async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: numb
   if (a1.ok && a1.token) {
     ACCESS_TOKEN = a1.token;
     ACCESS_EXP = a1.exp ?? null;
-    return { token: a1.token, exp: a1.exp ?? null, upstreamStatus: a1.status, upstreamBody: a1.body, payloadUsed: a1.payloadUsed, clientIdIncluded: a1.clientIdIncluded, attempts: [a1] };
+    return { token: a1.token, exp: a1.exp ?? null, upstreamStatus: a1.status, upstreamBody: a1.body, payloadUsed: a1.payloadUsed, clientIdIncluded: a1.clientIdIncluded, attempts: [a1], usingOverride };
   }
   const a2 = await doAttempt(url, attempt2Payload, "refresh_token", !!clientId);
   if (a2.ok && a2.token) {
     ACCESS_TOKEN = a2.token;
     ACCESS_EXP = a2.exp ?? null;
-    return { token: a2.token, exp: a2.exp ?? null, upstreamStatus: a2.status, upstreamBody: a2.body, payloadUsed: a2.payloadUsed, clientIdIncluded: a2.clientIdIncluded, attempts: [a1, a2] };
+    return { token: a2.token, exp: a2.exp ?? null, upstreamStatus: a2.status, upstreamBody: a2.body, payloadUsed: a2.payloadUsed, clientIdIncluded: a2.clientIdIncluded, attempts: [a1, a2], usingOverride };
   }
   // Fallback: form-urlencoded camel
   const form1 = new URLSearchParams();
@@ -130,7 +133,7 @@ async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: numb
   if (a3.ok && a3.token) {
     ACCESS_TOKEN = a3.token;
     ACCESS_EXP = a3.exp ?? null;
-    return { token: a3.token, exp: a3.exp ?? null, upstreamStatus: a3.status, upstreamBody: a3.body, payloadUsed: a3.payloadUsed, clientIdIncluded: a3.clientIdIncluded, attempts: [a1, a2, a3] };
+    return { token: a3.token, exp: a3.exp ?? null, upstreamStatus: a3.status, upstreamBody: a3.body, payloadUsed: a3.payloadUsed, clientIdIncluded: a3.clientIdIncluded, attempts: [a1, a2, a3], usingOverride };
   }
   // Fallback: form-urlencoded snake
   const form2 = new URLSearchParams();
@@ -144,11 +147,11 @@ async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: numb
   if (a4.ok && a4.token) {
     ACCESS_TOKEN = a4.token;
     ACCESS_EXP = a4.exp ?? null;
-    return { token: a4.token, exp: a4.exp ?? null, upstreamStatus: a4.status, upstreamBody: a4.body, payloadUsed: a4.payloadUsed, clientIdIncluded: a4.clientIdIncluded, attempts: [a1, a2, a3, a4] };
+    return { token: a4.token, exp: a4.exp ?? null, upstreamStatus: a4.status, upstreamBody: a4.body, payloadUsed: a4.payloadUsed, clientIdIncluded: a4.clientIdIncluded, attempts: [a1, a2, a3, a4], usingOverride };
   }
   // Return last attempt info, include attempts array
   const last = a4;
-  return { upstreamStatus: last.status, upstreamBody: last.body, payloadUsed: last.payloadUsed, clientIdIncluded: last.clientIdIncluded, attempts: [a1, a2, a3, a4] };
+  return { upstreamStatus: last.status, upstreamBody: last.body, payloadUsed: last.payloadUsed, clientIdIncluded: last.clientIdIncluded, attempts: [a1, a2, a3, a4], usingOverride };
 }
 
 async function ensureAccessToken(): Promise<string> {
@@ -169,8 +172,18 @@ export default async function handler(req: Request): Promise<Response> {
     }
     const { searchParams } = new URL(req.url);
     const debug = searchParams.get("debug") === "1" || searchParams.get("refresh") === "1";
+    const method = (req as any).method || "GET";
+    let override: string | undefined;
+    if (method === "POST") {
+      try {
+        const body = await req.json().catch(() => ({}));
+        if (body && typeof body.refreshTokenOverride === "string") {
+          override = body.refreshTokenOverride;
+        }
+      } catch {}
+    }
     if (debug) {
-      const r = await refreshAccessTokenWithRaw();
+      const r = await refreshAccessTokenWithRaw({ refreshTokenOverride: override });
       const nowSec = Math.floor(Date.now() / 1000);
       const exp = r.exp ?? ACCESS_EXP ?? null;
       const expiresInSec = exp ? Math.max(0, exp - nowSec) : null;
@@ -180,7 +193,7 @@ export default async function handler(req: Request): Promise<Response> {
         expiresInSec,
         preview: r.token ? r.token.slice(0, 12) + "..." : null,
         upstream: { status: r.upstreamStatus, body: r.upstreamBody },
-        meta: { payloadUsed: r.payloadUsed ?? null, clientIdIncluded: r.clientIdIncluded ?? false },
+        meta: { payloadUsed: r.payloadUsed ?? null, clientIdIncluded: r.clientIdIncluded ?? false, usingOverride: !!r.usingOverride },
         attempts: r.attempts ?? [],
       });
     } else {
