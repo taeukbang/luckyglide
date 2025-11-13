@@ -40,18 +40,21 @@ async function refreshPartnerAccessToken(): Promise<{ token: string; exp: number
   const clientId = (process.env.MRT_PARTNER_CLIENT_ID || "").trim();
   // Try preferred payload then fallback to snake_case key
   const attempts = [
-    { refreshToken, ...(clientId ? { clientId } : {}) },
-    { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) },
-  ];
+    { type: "json", body: { refreshToken, ...(clientId ? { clientId } : {}) } },
+    { type: "json", body: { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) } },
+    { type: "form", body: (() => { const f = new URLSearchParams(); f.set("refreshToken", refreshToken); if (clientId) f.set("clientId", clientId); return f; })() },
+    { type: "form", body: (() => { const f = new URLSearchParams(); f.set("refreshToken", refreshToken); f.set("refresh_token", refreshToken); if (clientId) { f.set("clientId", clientId); f.set("client_id", clientId); } return f; })() },
+  ] as const;
   let token: string | undefined;
   let lastStatus = 0;
   let lastText = "";
   for (const payload of attempts) {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const isForm = payload.type === "form";
+    const headers = isForm
+      ? { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "Accept": "application/json" }
+      : { "Content-Type": "application/json; charset=UTF-8", "Accept": "application/json" };
+    const body = isForm ? (payload.body as URLSearchParams).toString() : JSON.stringify(payload.body);
+    const res = await fetch(url, { method: "POST", headers, body });
     lastStatus = res.status;
     lastText = await res.text().catch(() => "");
     if (!res.ok) continue;
@@ -68,7 +71,7 @@ async function refreshPartnerAccessToken(): Promise<{ token: string; exp: number
   return { token, exp };
 }
 
-async function refreshPartnerAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string }> {
+async function refreshPartnerAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string; attempts: { type: "json" | "form"; status: number; body: string }[] }> {
   const refreshToken = (process.env.MRT_PARTNER_REFRESH_TOKEN || "").trim().replace(/^"+|"+$/g, "");
   if (!refreshToken) {
     throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
@@ -76,16 +79,21 @@ async function refreshPartnerAccessTokenWithRaw(): Promise<{ token?: string; exp
   const url = "https://api3.myrealtrip.com/authentication/v3/partner/token/refresh";
   const clientId = (process.env.MRT_PARTNER_CLIENT_ID || "").trim();
   const attempts = [
-    { refreshToken, ...(clientId ? { clientId } : {}) },
-    { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) },
+    { type: "json" as const, body: { refreshToken, ...(clientId ? { clientId } : {}) } },
+    { type: "json" as const, body: { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) } },
+    { type: "form" as const, body: (() => { const f = new URLSearchParams(); f.set("refreshToken", refreshToken); if (clientId) f.set("clientId", clientId); return f; })() },
+    { type: "form" as const, body: (() => { const f = new URLSearchParams(); f.set("refreshToken", refreshToken); f.set("refresh_token", refreshToken); if (clientId) { f.set("clientId", clientId); f.set("client_id", clientId); } return f; })() },
   ];
+  const tried: { type: "json" | "form"; status: number; body: string }[] = [];
   for (const payload of attempts) {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const isForm = payload.type === "form";
+    const headers = isForm
+      ? { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "Accept": "application/json" }
+      : { "Content-Type": "application/json; charset=UTF-8", "Accept": "application/json" };
+    const body = isForm ? (payload.body as URLSearchParams).toString() : JSON.stringify(payload.body);
+    const res = await fetch(url, { method: "POST", headers, body });
     const text = await res.text().catch(() => "");
+    tried.push({ type: payload.type, status: res.status, body: text.slice(0, 4000) });
     try {
       const data = JSON.parse(text);
       const token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
@@ -93,16 +101,12 @@ async function refreshPartnerAccessTokenWithRaw(): Promise<{ token?: string; exp
         const exp = decodeJwtExp(token);
         MRT_PARTNER_ACCESS_TOKEN = token;
         MRT_PARTNER_ACCESS_EXP = exp;
-        return { token, exp, upstreamStatus: res.status, upstreamBody: text.slice(0, 4000) };
+        return { token, exp, upstreamStatus: res.status, upstreamBody: text.slice(0, 4000), attempts: tried };
       }
     } catch {}
-    // if first attempt failed, return last upstream
-    if (payload === attempts[attempts.length - 1]) {
-      return { upstreamStatus: res.status, upstreamBody: text.slice(0, 4000) };
-    }
-    // else continue loop to next attempt
   }
-  return { upstreamStatus: 0, upstreamBody: "no-attempts" };
+  const last = tried[tried.length - 1] || { type: "json", status: 0, body: "no-attempts" };
+  return { upstreamStatus: last.status, upstreamBody: last.body, attempts: tried };
 }
 
 async function ensurePartnerAccessToken(): Promise<string> {
@@ -134,6 +138,7 @@ app.get("/api/mrt/partner/token", async (req, res) => {
         expiresInSec,
         preview: r.token ? r.token.slice(0, 12) + "..." : null,
         upstream: { status: r.upstreamStatus, body: r.upstreamBody },
+        attempts: r.attempts ?? [],
       });
     } else {
       const token = await ensurePartnerAccessToken();

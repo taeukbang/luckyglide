@@ -86,6 +86,23 @@ async function doAttempt(url: string, payload: any, used: AttemptResult["payload
   return { payloadUsed: used, clientIdIncluded: incl, status: r.status, body: text.slice(0, 4000), ok: !!token, token, exp: exp ?? null };
 }
 
+async function doAttemptForm(url: string, form: URLSearchParams, used: AttemptResult["payloadUsed"], incl: boolean): Promise<AttemptResult> {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "Accept": "application/json" },
+    body: form.toString(),
+  });
+  const text = await r.text().catch(() => "");
+  let token: string | undefined;
+  let exp: number | null | undefined;
+  try {
+    const data = JSON.parse(text);
+    token = (data?.data?.accessToken ?? data?.accessToken) as string | undefined;
+    if (token) exp = decodeJwtExp(token);
+  } catch {}
+  return { payloadUsed: used, clientIdIncluded: incl, status: r.status, body: text.slice(0, 4000), ok: !!token, token, exp: exp ?? null };
+}
+
 async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string; payloadUsed?: "refreshToken" | "refresh_token"; clientIdIncluded?: boolean; attempts: AttemptResult[] }> {
   const refreshToken = (process.env.MRT_PARTNER_REFRESH_TOKEN || "").trim().replace(/^"+|"+$/g, "");
   if (!refreshToken) throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
@@ -105,9 +122,33 @@ async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: numb
     ACCESS_EXP = a2.exp ?? null;
     return { token: a2.token, exp: a2.exp ?? null, upstreamStatus: a2.status, upstreamBody: a2.body, payloadUsed: a2.payloadUsed, clientIdIncluded: a2.clientIdIncluded, attempts: [a1, a2] };
   }
+  // Fallback: form-urlencoded camel
+  const form1 = new URLSearchParams();
+  form1.set("refreshToken", refreshToken);
+  if (clientId) form1.set("clientId", clientId);
+  const a3 = await doAttemptForm(url, form1, "refreshToken", !!clientId);
+  if (a3.ok && a3.token) {
+    ACCESS_TOKEN = a3.token;
+    ACCESS_EXP = a3.exp ?? null;
+    return { token: a3.token, exp: a3.exp ?? null, upstreamStatus: a3.status, upstreamBody: a3.body, payloadUsed: a3.payloadUsed, clientIdIncluded: a3.clientIdIncluded, attempts: [a1, a2, a3] };
+  }
+  // Fallback: form-urlencoded snake
+  const form2 = new URLSearchParams();
+  form2.set("refreshToken", refreshToken); // also keep camel in case backend maps both
+  form2.set("refresh_token", refreshToken);
+  if (clientId) {
+    form2.set("clientId", clientId);
+    form2.set("client_id", clientId);
+  }
+  const a4 = await doAttemptForm(url, form2, "refresh_token", !!clientId);
+  if (a4.ok && a4.token) {
+    ACCESS_TOKEN = a4.token;
+    ACCESS_EXP = a4.exp ?? null;
+    return { token: a4.token, exp: a4.exp ?? null, upstreamStatus: a4.status, upstreamBody: a4.body, payloadUsed: a4.payloadUsed, clientIdIncluded: a4.clientIdIncluded, attempts: [a1, a2, a3, a4] };
+  }
   // Return last attempt info, include attempts array
-  const last = a2;
-  return { upstreamStatus: last.status, upstreamBody: last.body, payloadUsed: last.payloadUsed, clientIdIncluded: last.clientIdIncluded, attempts: [a1, a2] };
+  const last = a4;
+  return { upstreamStatus: last.status, upstreamBody: last.body, payloadUsed: last.payloadUsed, clientIdIncluded: last.clientIdIncluded, attempts: [a1, a2, a3, a4] };
 }
 
 async function ensureAccessToken(): Promise<string> {
