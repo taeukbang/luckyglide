@@ -1,6 +1,6 @@
 import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl, codeToCountry } from "@/lib/flags";
 import { Card, CardContent } from "@/components/ui/card";
-import { buildMrtBookingUrl, weekdayKo, applyMrtDeepLinkIfNeeded } from "@/lib/utils";
+import { buildMrtBookingUrl, weekdayKo, applyMrtDeepLinkIfNeeded, resolveBookingUrlWithPartner } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
 import { Button } from "@/components/ui/button";
 import { Sparkline } from "./Sparkline";
@@ -202,15 +202,9 @@ export const FlightCard = ({
               일자별 가격 그래프
             </Button>
             <a
-              href={(() => {
-                const [depIso, retIsoRaw] = travelDates.split("~");
-                // 링크는 카드에 표시된 스캔값(출발/복귀일)을 그대로 사용
-                const retIso = retIsoRaw?.trim() || depIso;
-                const url = buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso }, { nonstop: Boolean(nonstop) });
-                return applyMrtDeepLinkIfNeeded(url + "&utm_source=luckyglide");
-              })()}
+              href="#"
               target="_blank"
-              onClick={(e)=>{
+              onClick={async (e)=>{
                 const [depIso, retIsoRaw] = travelDates.split("~");
                 const retIso = retIsoRaw?.trim() || depIso;
                 gaEvent('click_card', {
@@ -222,6 +216,18 @@ export const FlightCard = ({
                   price: price ?? undefined,
                   tripDays: meta?.tripDays,
                 });
+                e.preventDefault();
+                try {
+                  const finalUrl = await resolveBookingUrlWithPartner({
+                    from: "ICN",
+                    to: meta?.code ?? "",
+                    toNameKo: city ?? "",
+                    depdt: depIso,
+                    rtndt: retIso,
+                    nonstop: Boolean(nonstop),
+                  });
+                  if (finalUrl) window.open(finalUrl, "_blank", "noopener");
+                } catch {}
               }}
             >
               <Button size="sm" className="text-xs h-7 px-3 bg-gray-900 hover:bg-gray-800 text-white">

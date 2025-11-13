@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Verify from "./pages/Verify";
 import DirectTest from "./pages/DirectTest";
+import MrtPartnerTest from "./pages/MrtPartnerTest";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/verify" element={<Verify />} />
           <Route path="/direct-test" element={<DirectTest />} />
+          <Route path="/mrt-partner-test" element={<MrtPartnerTest />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

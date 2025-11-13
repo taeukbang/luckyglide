@@ -10,6 +10,129 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ---- MRT Partner access token cache/helpers ----
+let MRT_PARTNER_ACCESS_TOKEN: string | null = null;
+let MRT_PARTNER_ACCESS_EXP: number | null = null; // epoch seconds
+
+function decodeJwtExp(token: string): number | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const payloadRaw = parts[1]
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(Math.ceil(parts[1].length / 4) * 4, "=");
+    const json = Buffer.from(payloadRaw, "base64").toString("utf8");
+    const obj = JSON.parse(json);
+    const exp = Number(obj?.exp);
+    return Number.isFinite(exp) ? exp : null;
+  } catch {
+    return null;
+  }
+}
+
+async function refreshPartnerAccessToken(): Promise<{ token: string; exp: number | null }> {
+  const refreshToken = process.env.MRT_PARTNER_REFRESH_TOKEN;
+  if (!refreshToken) {
+    throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
+  }
+  const url = "https://api3.myrealtrip.com/authentication/v3/partner/token/refresh";
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Partner refresh error: ${res.status} ${text}`);
+  }
+  const data = await res.json().catch(() => ({}));
+  const token = data?.data?.accessToken as string | undefined;
+  if (!token) throw new Error("Partner refresh error: accessToken missing");
+  const exp = decodeJwtExp(token);
+  MRT_PARTNER_ACCESS_TOKEN = token;
+  MRT_PARTNER_ACCESS_EXP = exp;
+  return { token, exp };
+}
+
+async function ensurePartnerAccessToken(): Promise<string> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const exp = MRT_PARTNER_ACCESS_EXP ?? 0;
+  // refresh if missing or expiring in <= 60s
+  if (!MRT_PARTNER_ACCESS_TOKEN || !exp || exp - nowSec <= 60) {
+    const { token } = await refreshPartnerAccessToken();
+    return token;
+  }
+  return MRT_PARTNER_ACCESS_TOKEN;
+}
+
+// Step debug/status: ensure token and return expiry (masked; token not exposed)
+app.get("/api/mrt/partner/token", async (req, res) => {
+  try {
+    if (!process.env.MRT_PARTNER_REFRESH_TOKEN) {
+      return res.status(500).json({ ok: false, error: "MRT_PARTNER_REFRESH_TOKEN missing" });
+    }
+    const token = await ensurePartnerAccessToken();
+    const exp = MRT_PARTNER_ACCESS_EXP ?? null;
+    const nowSec = Math.floor(Date.now() / 1000);
+    const expiresInSec = exp ? Math.max(0, exp - nowSec) : null;
+    res.json({
+      ok: true,
+      exp,
+      expiresInSec,
+      // reveal only short prefix for debug
+      preview: token.slice(0, 12) + "...",
+    });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e?.message ?? "internal error" });
+  }
+});
+
+// Issue partner landing URL (마이링크)
+// body: { depAirportCd, depDate, arrAirportCd, arrDate, tripTypeCd?: "OW"|"RT" }
+app.post("/api/mrt/partner/landing-url", async (req, res) => {
+  try {
+    const { depAirportCd, depDate, arrAirportCd, arrDate, tripTypeCd } = req.body || {};
+    if (!depAirportCd || !arrAirportCd || !depDate) {
+      return res.status(400).json({ error: "depAirportCd, arrAirportCd, depDate are required" });
+    }
+    if (!process.env.MRT_PARTNER_REFRESH_TOKEN) {
+      return res.status(500).json({ error: "MRT_PARTNER_REFRESH_TOKEN missing" });
+    }
+    const token = await ensurePartnerAccessToken();
+    const url = "https://api3.myrealtrip.com/flight/api/partner/shopping/fare/query-landing-url";
+    const payload: any = {
+      depAirportCd: String(depAirportCd),
+      depDate: String(depDate),
+      arrAirportCd: String(arrAirportCd),
+      tripTypeCd: (tripTypeCd === "OW" || tripTypeCd === "RT")
+        ? tripTypeCd
+        : (arrDate && String(arrDate) !== String(depDate) ? "RT" : "OW"),
+    };
+    if (arrDate) payload.arrDate = String(arrDate);
+    const upstream = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "partner-access-token": token,
+      },
+      body: JSON.stringify(payload),
+    });
+    const text = await upstream.text();
+    if (!upstream.ok) {
+      return res.status(502).json({ error: `landing-url error ${upstream.status}`, body: text });
+    }
+    try {
+      const json = JSON.parse(text);
+      return res.json(json);
+    } catch {
+      return res.status(502).json({ error: "invalid upstream json", body: text });
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message ?? "internal error" });
+  }
+});
+
 app.get("/api/calendar", async (req, res) => {
   try {
     const from = String(req.query.from ?? "");

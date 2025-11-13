@@ -71,3 +71,21 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Environment variables
+
+Partner mylink (MyRealTrip Marketing Partner) integration requires:
+
+```
+MRT_PARTNER_REFRESH_TOKEN=eyJhbGciOiJIUzI1NiJ9....
+```
+
+- The token is used server-side to mint a short-lived access token.
+- Server endpoints:
+  - GET `/api/mrt/partner/token` — ensures access token and returns expiry info (no token body).
+  - POST `/api/mrt/partner/landing-url` — body: `{ depAirportCd, depDate, arrAirportCd, arrDate?, tripTypeCd? }`, returns `{ data: { url, gid } }`.
+- Frontend booking CTAs automatically call the landing-url endpoint and fall back to the legacy web URL on failure.
+
+Test page:
+- Route: `/mrt-partner-test`
+- Step-by-step: 1) Issue access token, 2) Request landing URL for given inputs.

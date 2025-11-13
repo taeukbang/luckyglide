@@ -133,3 +133,71 @@ export function weekdayKo(d: Date): string {
   const idx = d.getDay();
   return names[idx] ?? "";
 }
+
+// ---- Partner landing URL helper (frontend) ----
+export async function fetchMrtPartnerLandingUrl(input: {
+  depAirportCd: string;
+  depDate: string; // YYYY-MM-DD
+  arrAirportCd: string;
+  arrDate?: string; // YYYY-MM-DD
+  tripTypeCd?: "OW" | "RT";
+}): Promise<{ url: string; gid?: number } | null> {
+  try {
+    const res = await fetch("/api/mrt/partner/landing-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => ({}));
+    const url = data?.data?.url as string | undefined;
+    const gid = data?.data?.gid as number | undefined;
+    return url ? { url, gid } : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveBookingUrlWithPartner(params: {
+  from: string;
+  to: string;
+  toNameKo: string;
+  depdt: string;
+  rtndt?: string;
+  nonstop?: boolean;
+  utm?: string;
+}) {
+  const { from, to, toNameKo, depdt, rtndt, nonstop, utm = "utm_source=luckyglide" } = params;
+  // Try partner landing URL first
+  const partner = await fetchMrtPartnerLandingUrl({
+    depAirportCd: from,
+    depDate: depdt,
+    arrAirportCd: to,
+    arrDate: rtndt ?? depdt,
+    tripTypeCd: rtndt && rtndt !== depdt ? "RT" : "OW",
+  });
+  const appendUtm = (u: string) => {
+    try {
+      const url = new URL(u);
+      if (!url.searchParams.has("utm_source") && utm) {
+        const [k, v] = utm.split("=");
+        if (k && v) url.searchParams.set(k, v);
+      }
+      return url.toString();
+    } catch {
+      if (!u.includes("utm_source=") && utm) {
+        return u + (u.includes("?") ? "&" : "?") + utm;
+      }
+      return u;
+    }
+  };
+  if (partner?.url) {
+    return applyMrtDeepLinkIfNeeded(appendUtm(partner.url));
+  }
+  // Fallback to original web booking URL
+  const web = buildMrtBookingUrl(
+    { from, to, toNameKo, depdt, rtndt: rtndt ?? depdt },
+    { nonstop: !!nonstop }
+  );
+  return applyMrtDeepLinkIfNeeded(appendUtm(web));
+}

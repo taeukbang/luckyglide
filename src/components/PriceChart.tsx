@@ -1,6 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceArea, ReferenceLine } from "recharts";
 import { useEffect, useRef, useState } from "react";
-import { buildMrtBookingUrl, addDaysIsoKST, weekdayKo, applyMrtDeepLinkIfNeeded } from "@/lib/utils";
+import { buildMrtBookingUrl, addDaysIsoKST, weekdayKo, applyMrtDeepLinkIfNeeded, resolveBookingUrlWithPartner } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
 import { buildHolidayRangesForDomain, HolidayRangeIso } from "@/lib/holidays";
 
@@ -90,18 +90,27 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
     };
     const depIso = toIso(dep);
     const retIso = addDaysIsoKST(depIso, len - 1);
-    const bookingUrl = (bookingToCode && bookingToNameKo)
-      ? applyMrtDeepLinkIfNeeded(buildMrtBookingUrl({ from: bookingFromCode, to: bookingToCode, toNameKo: bookingToNameKo, fromNameKo: "인천", depdt: depIso, rtndt: retIso }, { nonstop: !!nonstop }) + "&utm_source=luckyglide")
-      : null;
     return (
       <div style={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, padding: 8 }}>
         <div style={{ color: "hsl(var(--foreground))", fontSize: 12 }}>출발일: {toMMDD(dep)}({weekdayKo(dep)})</div>
         <div style={{ color: "hsl(var(--foreground))", fontSize: 12 }}>도착일: {toMMDD(arr)}({weekdayKo(arr)})</div>
         <div style={{ color: "hsl(var(--foreground))", fontSize: 12, marginTop: 4 }}>가격: ₩{price.toLocaleString()}</div>
-        {bookingUrl ? (
+        {(bookingToCode && bookingToNameKo) ? (
           <div style={{ marginTop: 8 }}>
-            <a href={bookingUrl} target="_blank" onClick={()=>{
+            <a href="#" target="_blank" onClick={async (e)=>{
               gaEvent('click_graph', { code: bookingToCode, city: bookingToNameKo, depdt: depIso, rtndt: retIso, nonstop: !!nonstop, price });
+              e.preventDefault();
+              try {
+                const finalUrl = await resolveBookingUrlWithPartner({
+                  from: bookingFromCode,
+                  to: bookingToCode!,
+                  toNameKo: bookingToNameKo!,
+                  depdt: depIso,
+                  rtndt: retIso,
+                  nonstop: !!nonstop,
+                });
+                if (finalUrl) window.open(finalUrl, "_blank", "noopener");
+              } catch {}
             }} style={{
               display: "inline-block",
               fontSize: 12,

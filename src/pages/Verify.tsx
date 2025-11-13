@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PriceChart } from "@/components/PriceChart";
-import { buildMrtBookingUrl, applyMrtDeepLinkIfNeeded } from "@/lib/utils";
+import { buildMrtBookingUrl, applyMrtDeepLinkIfNeeded, resolveBookingUrlWithPartner } from "@/lib/utils";
 
 // 카드 목록에서 사용하는 목적지 목록 API 타입과 동일하게 맞춤
 type Destination = { code: string; nameKo: string; region: string };
@@ -216,8 +216,23 @@ export default function Verify() {
             </div>
             {cardInfo?.departureDate && cardInfo?.returnDate && (
               <a
-                href={applyMrtDeepLinkIfNeeded(buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: selectedCode, toNameKo: destinations.find(d=>d.code===selectedCode)?.nameKo || selectedCode, depdt: cardInfo.departureDate, rtndt: cardInfo.returnDate }, { nonstop: true }) + "&utm_source=luckyglide")}
+                href="#"
                 target="_blank"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  try {
+                    const toName = destinations.find(d=>d.code===selectedCode)?.nameKo || selectedCode;
+                    const finalUrl = await resolveBookingUrlWithPartner({
+                      from: "ICN",
+                      to: selectedCode,
+                      toNameKo: toName,
+                      depdt: cardInfo.departureDate!,
+                      rtndt: cardInfo.returnDate!,
+                      nonstop: true,
+                    });
+                    if (finalUrl) window.open(finalUrl, "_blank", "noopener");
+                  } catch {}
+                }}
               >
                 <Button size="sm" className="mt-2 w-full">예약(카드 최저가)</Button>
               </a>
@@ -251,23 +266,33 @@ export default function Verify() {
             <PriceChart data={chartData} />
             {bestChartEntry && (
               <a
-                href={(() => {
-                  const now = new Date();
-                  const yyyy = now.getFullYear();
-                  const [mm, dd] = String(bestChartEntry.date).split("/");
-                  const depIso = `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
-                  const addDays = (iso: string, days: number) => {
-                    const d0 = new Date(iso);
-                    d0.setDate(d0.getDate() + days);
-                    const y = d0.getFullYear();
-                    const m = String(d0.getMonth() + 1).padStart(2, "0");
-                    const da = String(d0.getDate()).padStart(2, "0");
-                    return `${y}-${m}-${da}`;
-                  };
-                  const retIso = addDays(depIso, Math.max(1, tripDays) - 1);
-                  return applyMrtDeepLinkIfNeeded(buildMrtBookingUrl({ from: "ICN", fromNameKo: "인천", to: selectedCode, toNameKo: destinations.find(d=>d.code===selectedCode)?.nameKo || selectedCode, depdt: depIso, rtndt: retIso }, { nonstop: true }) + "&utm_source=luckyglide");
-                })()}
+                href="#"
                 target="_blank"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  try {
+                    const now = new Date();
+                    const yyyy = now.getFullYear();
+                    const [mm, dd] = String(bestChartEntry.date).split("/");
+                    const depIso = `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+                    const ret = new Date(depIso);
+                    ret.setDate(ret.getDate() + Math.max(1, tripDays) - 1);
+                    const ry = ret.getFullYear();
+                    const rm = String(ret.getMonth() + 1).padStart(2, "0");
+                    const rd = String(ret.getDate()).padStart(2, "0");
+                    const retIso = `${ry}-${rm}-${rd}`;
+                    const toName = destinations.find(d=>d.code===selectedCode)?.nameKo || selectedCode;
+                    const finalUrl = await resolveBookingUrlWithPartner({
+                      from: "ICN",
+                      to: selectedCode,
+                      toNameKo: toName,
+                      depdt: depIso,
+                      rtndt: retIso,
+                      nonstop: true,
+                    });
+                    if (finalUrl) window.open(finalUrl, "_blank", "noopener");
+                  } catch {}
+                }}
               >
                 <Button size="sm" className="w-full">예약(그래프 최저가)</Button>
               </a>
