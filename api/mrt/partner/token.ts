@@ -59,14 +59,14 @@ async function refreshAccessToken(): Promise<{ token: string; exp: number | null
   return { token, exp };
 }
 
-async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string }> {
+async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string; payloadUsed?: "refreshToken" | "refresh_token"; clientIdIncluded?: boolean }> {
   const refreshToken = (process.env.MRT_PARTNER_REFRESH_TOKEN || "").trim().replace(/^"+|"+$/g, "");
   if (!refreshToken) throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
   const url = "https://api3.myrealtrip.com/authentication/v3/partner/token/refresh";
   const clientId = (process.env.MRT_PARTNER_CLIENT_ID || "").trim();
   const attempts = [
-    { refreshToken, ...(clientId ? { clientId } : {}) },
-    { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) },
+    { refreshToken, ...(clientId ? { clientId } : {}) } as const,
+    { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) } as const,
   ];
   for (const payload of attempts) {
     const r = await fetch(url, {
@@ -82,11 +82,15 @@ async function refreshAccessTokenWithRaw(): Promise<{ token?: string; exp?: numb
         const exp = decodeJwtExp(token);
         ACCESS_TOKEN = token;
         ACCESS_EXP = exp;
-        return { token, exp, upstreamStatus: r.status, upstreamBody: text.slice(0, 4000) };
+        const used = ("refreshToken" in payload) ? "refreshToken" : "refresh_token";
+        const incl = ("clientId" in payload) || ("client_id" in payload);
+        return { token, exp, upstreamStatus: r.status, upstreamBody: text.slice(0, 4000), payloadUsed: used, clientIdIncluded: incl };
       }
     } catch {}
     if (payload === attempts[attempts.length - 1]) {
-      return { upstreamStatus: r.status, upstreamBody: text.slice(0, 4000) };
+      const used = ("refreshToken" in payload) ? "refreshToken" : "refresh_token";
+      const incl = ("clientId" in payload) || ("client_id" in payload);
+      return { upstreamStatus: r.status, upstreamBody: text.slice(0, 4000), payloadUsed: used, clientIdIncluded: incl };
     }
   }
   return { upstreamStatus: 0, upstreamBody: "no-attempts" };
@@ -121,6 +125,7 @@ export default async function handler(req: Request): Promise<Response> {
         expiresInSec,
         preview: r.token ? r.token.slice(0, 12) + "..." : null,
         upstream: { status: r.upstreamStatus, body: r.upstreamBody },
+        meta: { payloadUsed: r.payloadUsed ?? null, clientIdIncluded: r.clientIdIncluded ?? false },
       });
     } else {
       const token = await ensureAccessToken();

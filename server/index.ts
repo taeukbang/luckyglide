@@ -153,6 +153,28 @@ app.get("/api/mrt/partner/token", async (req, res) => {
   }
 });
 
+// Env diagnostics (server runtime)
+app.get("/api/mrt/partner/env", (req, res) => {
+  try {
+    const rawRefresh = process.env.MRT_PARTNER_REFRESH_TOKEN || "";
+    const trimmed = rawRefresh.trim().replace(/^"+|"+$/g, "");
+    const hasRefreshToken = trimmed.length > 0;
+    const rawClientId = process.env.MRT_PARTNER_CLIENT_ID || "";
+    const clientId = rawClientId.trim().replace(/^"+|"+$/g, "");
+    const hasClientId = clientId.length > 0;
+    res.json({
+      ok: true,
+      runtime: "node",
+      hasRefreshToken,
+      refreshTokenLen: hasRefreshToken ? trimmed.length : 0,
+      hasClientId,
+      clientIdLen: hasClientId ? clientId.length : 0,
+    });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e?.message ?? "internal error" });
+  }
+});
+
 // Issue partner landing URL (마이링크)
 // body: { depAirportCd, depDate, arrAirportCd, arrDate, tripTypeCd?: "OW"|"RT" }
 app.post("/api/mrt/partner/landing-url", async (req, res) => {

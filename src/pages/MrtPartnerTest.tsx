@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 export default function MrtPartnerTest() {
   const [tokenStatus, setTokenStatus] = useState<null | { ok: boolean; exp?: number | null; expiresInSec?: number | null; preview?: string | null; error?: string; upstream?: { status: number; body: string } }>(null);
   const [loadingToken, setLoadingToken] = useState(false);
+  const [envStatus, setEnvStatus] = useState<null | { ok: boolean; runtime?: string; hasRefreshToken?: boolean; refreshTokenLen?: number; hasClientId?: boolean; clientIdLen?: number; error?: string }>(null);
+  const [loadingEnv, setLoadingEnv] = useState(false);
 
   const [depAirportCd, setDepAirportCd] = useState("ICN");
   const [arrAirportCd, setArrAirportCd] = useState("BKK");
@@ -43,6 +45,19 @@ export default function MrtPartnerTest() {
       setTokenStatus({ ok: false, error: e?.message ?? "error" });
     } finally {
       setLoadingToken(false);
+    }
+  };
+
+  const requestEnv = async () => {
+    try {
+      setLoadingEnv(true);
+      const res = await fetch("/api/mrt/partner/env");
+      const json = await res.json();
+      setEnvStatus(json);
+    } catch (e: any) {
+      setEnvStatus({ ok: false, error: e?.message ?? "error" });
+    } finally {
+      setLoadingEnv(false);
     }
   };
 
@@ -87,6 +102,25 @@ export default function MrtPartnerTest() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardContent className="p-4 space-y-3">
+            <h3 className="font-semibold">Step 0. 환경 변수 확인</h3>
+            <p className="text-sm text-muted-foreground">프리뷰(Edge) 런타임의 env 로드 여부를 확인합니다.</p>
+            <Button size="sm" onClick={requestEnv} disabled={loadingEnv}>{loadingEnv ? "확인 중…" : "확인"}</Button>
+            {envStatus ? (
+              <div className="text-sm">
+                <div>ok: {String(envStatus.ok)}</div>
+                {"runtime" in envStatus ? <div>runtime: {envStatus.runtime}</div> : null}
+                {"hasRefreshToken" in envStatus ? <div>hasRefreshToken: {String(envStatus.hasRefreshToken)}</div> : null}
+                {"refreshTokenLen" in envStatus ? <div>refreshTokenLen: {envStatus.refreshTokenLen}</div> : null}
+                {"hasClientId" in envStatus ? <div>hasClientId: {String(envStatus.hasClientId)}</div> : null}
+                {"clientIdLen" in envStatus ? <div>clientIdLen: {envStatus.clientIdLen}</div> : null}
+                {"error" in envStatus && envStatus.error ? <div className="text-red-600">error: {envStatus.error}</div> : null}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 space-y-3">
             <h3 className="font-semibold">Step 1. 액세스 토큰 발급</h3>
             <p className="text-sm text-muted-foreground">서버의 환경변수 MRT_PARTNER_REFRESH_TOKEN을 사용합니다.</p>
             <div className="flex gap-2">
@@ -100,6 +134,11 @@ export default function MrtPartnerTest() {
                 {"preview" in tokenStatus && tokenStatus.preview ? <div>preview: {tokenStatus.preview}</div> : null}
                 {"expiresInSec" in tokenStatus ? <div>expiresInSec: {tokenStatus.expiresInSec ?? "-"}</div> : null}
                 {"exp" in tokenStatus ? <div>exp: {tokenStatus.exp ?? "-"}</div> : null}
+                {"meta" in (tokenStatus as any) && (tokenStatus as any).meta ? (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    payloadUsed: {(tokenStatus as any).meta.payloadUsed ?? "-"}, clientIdIncluded: {String((tokenStatus as any).meta.clientIdIncluded ?? false)}
+                  </div>
+                ) : null}
                 {"upstream" in tokenStatus && tokenStatus.upstream ? (
                   <details className="mt-2">
                     <summary className="cursor-pointer">업스트림 응답 보기</summary>
