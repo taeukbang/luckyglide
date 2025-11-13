@@ -135,8 +135,10 @@ export default function MrtPartnerTest() {
                 {"runtime" in envStatus ? <div>runtime: {envStatus.runtime}</div> : null}
                 {"hasRefreshToken" in envStatus ? <div>hasRefreshToken: {String(envStatus.hasRefreshToken)}</div> : null}
                 {"refreshTokenLen" in envStatus ? <div>refreshTokenLen: {envStatus.refreshTokenLen}</div> : null}
+                {"refreshTokenPreview" in envStatus && (envStatus as any).refreshTokenPreview ? <div>refreshTokenPreview: {(envStatus as any).refreshTokenPreview}</div> : null}
                 {"hasClientId" in envStatus ? <div>hasClientId: {String(envStatus.hasClientId)}</div> : null}
                 {"clientIdLen" in envStatus ? <div>clientIdLen: {envStatus.clientIdLen}</div> : null}
+                {"clientIdPreview" in envStatus && (envStatus as any).clientIdPreview ? <div>clientIdPreview: {(envStatus as any).clientIdPreview}</div> : null}
                 {"error" in envStatus && envStatus.error ? <div className="text-red-600">error: {envStatus.error}</div> : null}
               </div>
             ) : null}
@@ -154,6 +156,17 @@ export default function MrtPartnerTest() {
             <div className="space-y-2 pt-2">
               <div className="text-xs text-muted-foreground">수동 refreshToken 오버라이드(테스트용)</div>
               <Input value={rtOverride} onChange={(e)=> setRtOverride(e.target.value)} placeholder="여기에 refreshToken 붙여넣기" />
+              {rtOverride ? (
+                <div className="text-xs text-muted-foreground">
+                  preview: {(() => {
+                    const s = rtOverride;
+                    if (s.length <= 8) return "*".repeat(s.length);
+                    const head = s.slice(0, 6);
+                    const tail = s.slice(-6);
+                    return `${head}...${tail}`;
+                  })()}
+                </div>
+              ) : null}
               <div className="flex gap-2">
                 <Button size="sm" variant="secondary" onClick={requestTokenDebugWithOverride} disabled={loadingToken || !rtOverride.trim()}>
                   {loadingToken ? "발급 중…" : "디버그(수동 토큰)"}

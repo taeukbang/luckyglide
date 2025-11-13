@@ -161,6 +161,14 @@ app.get("/api/mrt/partner/token", async (req, res) => {
 // Env diagnostics (server runtime)
 app.get("/api/mrt/partner/env", (req, res) => {
   try {
+    const mask = (s: string) => {
+      const n = s.length;
+      if (n === 0) return "";
+      if (n <= 8) return "*".repeat(n);
+      const head = s.slice(0, 6);
+      const tail = s.slice(-6);
+      return `${head}...${tail}`;
+    };
     const rawRefresh = process.env.MRT_PARTNER_REFRESH_TOKEN || "";
     const trimmed = rawRefresh.trim().replace(/^"+|"+$/g, "");
     const hasRefreshToken = trimmed.length > 0;
@@ -172,8 +180,10 @@ app.get("/api/mrt/partner/env", (req, res) => {
       runtime: "node",
       hasRefreshToken,
       refreshTokenLen: hasRefreshToken ? trimmed.length : 0,
+      refreshTokenPreview: hasRefreshToken ? mask(trimmed) : null,
       hasClientId,
       clientIdLen: hasClientId ? clientId.length : 0,
+      clientIdPreview: hasClientId ? mask(clientId) : null,
     });
   } catch (e: any) {
     res.status(500).json({ ok: false, error: e?.message ?? "internal error" });
