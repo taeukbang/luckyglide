@@ -42,8 +42,6 @@ async function refreshPartnerAccessToken(): Promise<{ token: string; exp: number
   const attempts = [
     { type: "json", body: { refreshToken, ...(clientId ? { clientId } : {}) } },
     { type: "json", body: { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) } },
-    { type: "form", body: (() => { const f = new URLSearchParams(); f.set("refreshToken", refreshToken); if (clientId) f.set("clientId", clientId); return f; })() },
-    { type: "form", body: (() => { const f = new URLSearchParams(); f.set("refreshToken", refreshToken); f.set("refresh_token", refreshToken); if (clientId) { f.set("clientId", clientId); f.set("client_id", clientId); } return f; })() },
   ] as const;
   let token: string | undefined;
   let lastStatus = 0;
@@ -71,7 +69,7 @@ async function refreshPartnerAccessToken(): Promise<{ token: string; exp: number
   return { token, exp };
 }
 
-async function refreshPartnerAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string; attempts: { type: "json" | "form"; status: number; body: string }[] }> {
+async function refreshPartnerAccessTokenWithRaw(): Promise<{ token?: string; exp?: number | null; upstreamStatus: number; upstreamBody: string; attempts: { type: "json"; status: number; body: string }[] }> {
   const refreshToken = (process.env.MRT_PARTNER_REFRESH_TOKEN || "").trim().replace(/^"+|"+$/g, "");
   if (!refreshToken) {
     throw new Error("MRT_PARTNER_REFRESH_TOKEN is not set");
@@ -81,16 +79,11 @@ async function refreshPartnerAccessTokenWithRaw(): Promise<{ token?: string; exp
   const attempts = [
     { type: "json" as const, body: { refreshToken, ...(clientId ? { clientId } : {}) } },
     { type: "json" as const, body: { refresh_token: refreshToken, ...(clientId ? { client_id: clientId } : {}) } },
-    { type: "form" as const, body: (() => { const f = new URLSearchParams(); f.set("refreshToken", refreshToken); if (clientId) f.set("clientId", clientId); return f; })() },
-    { type: "form" as const, body: (() => { const f = new URLSearchParams(); f.set("refreshToken", refreshToken); f.set("refresh_token", refreshToken); if (clientId) { f.set("clientId", clientId); f.set("client_id", clientId); } return f; })() },
   ];
-  const tried: { type: "json" | "form"; status: number; body: string }[] = [];
+  const tried: { type: "json"; status: number; body: string }[] = [];
   for (const payload of attempts) {
-    const isForm = payload.type === "form";
-    const headers = isForm
-      ? { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "Accept": "application/json" }
-      : { "Content-Type": "application/json; charset=UTF-8", "Accept": "application/json" };
-    const body = isForm ? (payload.body as URLSearchParams).toString() : JSON.stringify(payload.body);
+    const headers = { "Content-Type": "application/json; charset=UTF-8", "Accept": "application/json" };
+    const body = JSON.stringify(payload.body);
     const res = await fetch(url, { method: "POST", headers, body });
     const text = await res.text().catch(() => "");
     tried.push({ type: payload.type, status: res.status, body: text.slice(0, 4000) });
@@ -105,8 +98,9 @@ async function refreshPartnerAccessTokenWithRaw(): Promise<{ token?: string; exp
       }
     } catch {}
   }
-  const last = tried[tried.length - 1] || { type: "json", status: 0, body: "no-attempts" };
-  return { upstreamStatus: last.status, upstreamBody: last.body, attempts: tried };
+  // Prefer first attempt context in upstream for clarity
+  const base = tried[0] || { type: "json", status: 0, body: "no-attempts" };
+  return { upstreamStatus: base.status, upstreamBody: base.body, attempts: tried };
 }
 
 async function ensurePartnerAccessToken(): Promise<string> {
