@@ -12,8 +12,35 @@ export default async function handler(req: Request): Promise<Response> {
   if ((req as any).method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders() });
   try {
     const body = await req.json().catch(() => ({}));
-    const { from = "ICN", to, startDate, days = 180, tripDays = 3, transfer = -1 } = body || {};
+    const {
+      from = "ICN",
+      to,
+      startDate,
+      days = 180,
+      tripDays = 3,
+      transfer = -1,
+      airline,
+      airlines,
+    } = body || {};
     if (!to) return json({ error: "to is required" }, 400);
+    const airlineFilters = (() => {
+      const arr: string[] = [];
+      if (Array.isArray(airlines)) {
+        for (const token of airlines) {
+          if (typeof token === "string" && token.trim()) arr.push(token.trim());
+        }
+      } else if (typeof airlines === "string" && airlines.trim()) {
+        arr.push(...airlines.split(",").map((s) => s.trim()).filter(Boolean));
+      }
+      if (typeof airline === "string" && airline.trim()) arr.push(airline.trim());
+      const deduped = Array.from(new Set(arr));
+      return deduped.length ? deduped : null;
+    })();
+    const applyAirlineFilter = <T extends { eq: Function; in: Function }>(query: T) => {
+      if (!airlineFilters || !airlineFilters.length) return query;
+      if (airlineFilters.length === 1) return (query as any).eq("min_airline", airlineFilters[0]);
+      return (query as any).in("min_airline", airlineFilters);
+    };
 
     const SUPABASE_URL = process.env.SUPABASE_URL as string | undefined;
     const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY as string | undefined;
@@ -43,7 +70,7 @@ export default async function handler(req: Request): Promise<Response> {
     const results: any[] = [];
     for (const depC of depChunks) {
       for (const retC of retChunks) {
-        const { data, error } = await supabase
+        let q = supabase
           .from("fares")
           .select("departure_date, return_date, trip_days, min_price, collected_at")
           .eq("from", from)
@@ -54,6 +81,8 @@ export default async function handler(req: Request): Promise<Response> {
           .in("return_date", retC)
           .order("collected_at", { ascending: false })
           .order("departure_date", { ascending: true });
+        q = applyAirlineFilter(q);
+        const { data, error } = await q;
         if (error) throw error;
         if (data) results.push(...data);
       }

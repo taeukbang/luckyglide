@@ -38,6 +38,7 @@ interface FlightDetailDialogProps {
   refreshLoading?: boolean;
   justRefreshed?: boolean;
   nonstop?: boolean;
+  airline?: string | null;
 }
 
 export const FlightDetailDialog = ({
@@ -55,6 +56,7 @@ export const FlightDetailDialog = ({
   refreshLoading,
   justRefreshed,
   nonstop,
+  airline,
 }: FlightDetailDialogProps) => {
   const [tripDuration, setTripDuration] = useState(String(tripDays));
   // 부모 tripDays가 바뀌면 내부 선택값도 동기화 (카드의 여행일수 반영)
@@ -93,6 +95,9 @@ export const FlightDetailDialog = ({
             <div className="text-left">
               <DialogTitle className="text-2xl text-left text-gray-900">{city}</DialogTitle>
               <DialogDescription className="text-base text-left text-gray-600">{country}</DialogDescription>
+              {airline ? (
+                <p className="text-xs text-gray-500 mt-1">최저가 항공사: {airline}</p>
+              ) : null}
             </div>
           </div>
         </DialogHeader>

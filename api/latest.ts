@@ -32,6 +32,19 @@ export default async function handler(req: Request): Promise<Response> {
     const depIso = depParam && /^\d{4}-\d{2}-\d{2}$/.test(depParam) ? depParam : null;
     const retParam = searchParams.get("ret");
     const retIso = retParam && /^\d{4}-\d{2}-\d{2}$/.test(retParam) ? retParam : null;
+    const airlinesParam = searchParams.get("airlines");
+    const airlineParam = searchParams.get("airline");
+    const airlineFilters = (() => {
+      const tokens = airlinesParam?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+      if (airlineParam) tokens.push(airlineParam.trim());
+      const deduped = Array.from(new Set(tokens.filter(Boolean)));
+      return deduped.length ? deduped : null;
+    })();
+    const applyAirlineFilter = <T extends { eq: Function; in: Function }>(query: T) => {
+      if (!airlineFilters || !airlineFilters.length) return query;
+      if (airlineFilters.length === 1) return (query as any).eq("min_airline", airlineFilters[0]);
+      return (query as any).in("min_airline", airlineFilters);
+    };
 
     let targets = DESTINATIONS_ALL;
     if (region && region !== "모두") targets = targets.filter((d) => d.region === region);
@@ -51,7 +64,7 @@ export default async function handler(req: Request): Promise<Response> {
     let extrema: any[] = [];
     if (depIso && retIso) {
       // 출발/도착일이 모두 고정된 경우: fares에서 해당 날짜의 최신 스냅샷을 목적지별 1건씩
-      const { data, error } = await supabase
+      let q = supabase
         .from("fares")
         .select("from,to,departure_date,return_date,trip_days,min_price,min_airline,collected_at,transfer_filter")
         .eq("from", from)
@@ -61,6 +74,8 @@ export default async function handler(req: Request): Promise<Response> {
         .eq("departure_date", depIso)
         .eq("return_date", retIso)
         .order("collected_at", { ascending: false });
+      q = applyAirlineFilter(q);
+      const { data, error } = await q;
       if (error) throw error;
       const byTo = new Map<string, any>();
       for (const row of data ?? []) if (!byTo.has(row.to)) byTo.set(row.to, row);
@@ -68,7 +83,7 @@ export default async function handler(req: Request): Promise<Response> {
     } else if (depIso && tripDaysFilter != null) {
       // 일정 고정 모드: fares 테이블에서 해당 출발/복귀일 스냅샷을 직접 조회
       const retIso = addDaysIsoKST(depIso, Math.max(1, Number(tripDaysFilter)) - 1);
-      const { data, error } = await supabase
+      let q = supabase
         .from("fares")
         .select("from,to,departure_date,return_date,trip_days,min_price,min_airline,collected_at,transfer_filter")
         .eq("from", from)
@@ -78,6 +93,8 @@ export default async function handler(req: Request): Promise<Response> {
         .eq("departure_date", depIso)
         .eq("return_date", retIso)
         .order("collected_at", { ascending: false });
+      q = applyAirlineFilter(q);
+      const { data, error } = await q;
       if (error) throw error;
       // 목적지별 최신 1건만 사용
       const byTo = new Map<string, any>();
@@ -86,22 +103,26 @@ export default async function handler(req: Request): Promise<Response> {
       }
       extrema = Array.from(byTo.values());
     } else if (tripDaysFilter != null) {
-      const { data, error } = await supabase
+      let q = supabase
         .from("fares_city_extrema_tripdays")
         .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at,transfer_filter")
         .eq("from", from)
         .in("to", codes)
         .eq("transfer_filter", transfer)
         .eq("trip_days", tripDaysFilter);
+      q = applyAirlineFilter(q);
+      const { data, error } = await q;
       if (error) throw error;
       extrema = data ?? [];
     } else {
       const view = transfer === 0 ? "fares_city_extrema_direct" : "fares_city_extrema";
-      const { data, error } = await supabase
+      let q = supabase
         .from(view)
         .select("from,to,departure_date,return_date,trip_days,min_price,max_price,min_airline,collected_at")
         .eq("from", from)
         .in("to", codes);
+      q = applyAirlineFilter(q);
+      const { data, error } = await q;
       if (error) throw error;
       extrema = data ?? [];
     }
@@ -120,6 +141,7 @@ export default async function handler(req: Request): Promise<Response> {
       const retIsoCalc = addDaysIsoKST(depIso, Math.max(1, Number(tripDaysFilter)) - 1);
       qRecent = (qRecent as any).eq("departure_date", depIso).eq("return_date", retIsoCalc);
     }
+    qRecent = applyAirlineFilter(qRecent as any);
     const { data: recentRows, error: errRecent } = await qRecent as any;
     if (errRecent) throw errRecent;
 

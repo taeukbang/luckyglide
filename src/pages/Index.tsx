@@ -26,6 +26,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type LatestItem = {
   code: string;
@@ -37,7 +46,7 @@ type LatestItem = {
   originalPrice?: number | null;
   departureDate: string;
   returnDate: string;
-  airline: string;
+  airline: string | null;
   collectedAt: string;
   tripDays?: number | null;
   meta?: any;
@@ -89,6 +98,8 @@ const Index = () => {
   const [fixedDepIso, setFixedDepIso] = useState<string | null>(null);
   const [fixedRetIso, setFixedRetIso] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
+  const [airlineCatalog, setAirlineCatalog] = useState<string[]>([]);
   
   useEffect(() => {
     const controller = new AbortController();
@@ -115,6 +126,7 @@ const Index = () => {
         }
         if (fixedDepIso) qs.set('dep', fixedDepIso);
         if (fixedRetIso) qs.set('ret', fixedRetIso);
+        if (selectedAirlines.length) qs.set('airlines', selectedAirlines.join(','));
         const res = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -143,7 +155,7 @@ const Index = () => {
 
     progressiveLoad();
     return () => controller.abort();
-  }, [selectedContinent, directOnly, tripDaysSel, fixedDepIso, fixedRetIso]);
+  }, [selectedContinent, directOnly, tripDaysSel, fixedDepIso, fixedRetIso, selectedAirlines]);
 
   // /api/destinations을 초기 1회 로드하여 보조 맵 구성
   useEffect(() => {
@@ -163,6 +175,29 @@ const Index = () => {
     return () => { aborted = true; };
   }, []);
 
+  useEffect(() => {
+    setAirlineCatalog((prev) => {
+      const merged = new Set(prev);
+      for (const it of items) {
+        if (it.airline) merged.add(it.airline);
+      }
+      return Array.from(merged);
+    });
+  }, [items]);
+
+  const airlineOptions = useMemo(
+    () => [...airlineCatalog].sort((a, b) => a.localeCompare(b, "ko")),
+    [airlineCatalog]
+  );
+
+  useEffect(() => {
+    setSelectedAirlines((prev) => {
+      if (!prev.length) return prev;
+      const next = prev.filter((air) => airlineOptions.includes(air));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [airlineOptions]);
+
   const filteredFlights = useMemo(() => {
     const regionSet = new Set<string>([selectedContinent]);
     // 숫자 보장: Supabase numeric → string 방지
@@ -177,6 +212,7 @@ const Index = () => {
       ? normalized.filter(it => it.city?.toLowerCase().includes(cityQuery.trim().toLowerCase()))
       : normalized;
 
+    const normalizedAirlineFilters = selectedAirlines.map((s) => s.toLowerCase());
     const sorted = [...byQuery].sort((a, b) => {
       if (sortKey === "discountDesc") {
         const aDiscount = (typeof a.price === 'number' && typeof a.originalPrice === 'number' && a.originalPrice > 0)
@@ -195,6 +231,11 @@ const Index = () => {
     });
     return sorted
       .filter((it) => (selectedContinent === "모두" ? true : regionSet.has(it.region ?? "")))
+      .filter((it) => {
+        if (!normalizedAirlineFilters.length) return true;
+        const airline = (it.airline ?? "").toLowerCase();
+        return airline ? normalizedAirlineFilters.includes(airline) : false;
+      })
       .map((it, idx) => {
         const price = it.price !== null && it.price !== undefined ? Number(it.price) : null as any;
         const original = (it.originalPrice !== null && it.originalPrice !== undefined && it.originalPrice !== "") ? Number(it.originalPrice) : null as any;
@@ -215,13 +256,14 @@ const Index = () => {
           originalPrice: original as any,
           discount,
           travelDates,
-          meta: { ...(it as any).meta, code: it.code, tripDays: it.tripDays ?? undefined },
+          airline: it.airline ?? null,
+          meta: { ...(it as any).meta, code: it.code, tripDays: it.tripDays ?? undefined, airline: it.airline ?? null },
           priceHistory: [] as any,
           continent: it.region ?? "",
         collectedAt: it.collectedAt,
         });
       });
-  }, [items, selectedContinent, sortKey, cityQuery, destMap]);
+  }, [items, selectedContinent, sortKey, cityQuery, destMap, selectedAirlines]);
 
   useEffect(() => {
     if (!dialogOpen || !selectedFlight?.code) return;
@@ -235,7 +277,8 @@ const Index = () => {
           qs.set('from', 'ICN');
           qs.set('codes', selectedFlight.code);
           qs.set('transfer', directOnly ? '0' : '-1');
-          const latestRes = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
+        if (selectedAirlines.length) qs.set('airlines', selectedAirlines.join(','));
+        const latestRes = await fetch(`/api/latest?${qs.toString()}`, { signal: controller.signal });
           if (latestRes.ok) {
             const data = await latestRes.json();
             const item = (data.items || [])[0];
@@ -248,18 +291,27 @@ const Index = () => {
                 travelDates: item.departureDate && item.returnDate ? `${item.departureDate}~${item.returnDate}` : prev.travelDates,
                 meta: { ...(prev.meta||{}), tripDays: (item.tripDays !== null && item.tripDays !== undefined) ? Number(item.tripDays) : (prev.meta?.tripDays) },
                 collectedAt: item.collectedAt ?? prev.collectedAt,
+              airline: item.airline ?? prev.airline,
               } : prev);
             }
           }
         } catch {}
         // 기존 실시간 API 호출은 유지하되, DB 기반 엔드포인트로 대체 (주석 처리)
         // const res = await fetch('/api/calendar-window', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 14 }), signal: controller.signal });
-        const res = await fetch('/api/calendar-window-db', {
+        const payload: Record<string, any> = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ from: 'ICN', to: selectedFlight.code, tripDays, days: 180, transfer: directOnly ? 0 : -1 }),
+          body: JSON.stringify({
+            from: 'ICN',
+            to: selectedFlight.code,
+            tripDays,
+            days: 180,
+            transfer: directOnly ? 0 : -1,
+            ...(selectedAirlines.length ? { airlines: selectedAirlines } : {}),
+          }),
           signal: controller.signal,
-        });
+        };
+        const res = await fetch('/api/calendar-window-db', payload);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const hist = (data.items || []).map((d: any) => ({ date: d.date, price: Number(d.price) }));
@@ -273,7 +325,7 @@ const Index = () => {
     };
     loadHistory(dialogTripDays);
     return () => controller.abort();
-  }, [dialogOpen, selectedFlight?.code, dialogTripDays]);
+  }, [dialogOpen, selectedFlight?.code, dialogTripDays, selectedAirlines, directOnly]);
 
   const [refreshingCodes, setRefreshingCodes] = useState<Set<string>>(new Set());
   const [justRefreshedCodes, setJustRefreshedCodes] = useState<Set<string>>(new Set());
@@ -288,6 +340,7 @@ const Index = () => {
       qs.set('from', 'ICN');
       qs.set('codes', code);
       qs.set('transfer', directOnly ? '0' : '-1');
+      if (selectedAirlines.length) qs.set('airlines', selectedAirlines.join(','));
       const latestRes = await fetch(`/api/latest?${qs.toString()}`);
       if (latestRes.ok) {
         const data = await latestRes.json();
@@ -309,6 +362,7 @@ const Index = () => {
             return {
               ...prev,
               collectedAt: item.collectedAt ?? '',
+              airline: item.airline ?? prev.airline,
             };
           });
           if (dialogOpen && selectedFlight?.code === code) {
@@ -320,7 +374,13 @@ const Index = () => {
               const res2 = await fetch('/api/calendar-window-db', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ from: 'ICN', to: code, tripDays: dialogTripDays, days: 180 }),
+                body: JSON.stringify({
+                  from: 'ICN',
+                  to: code,
+                  tripDays: dialogTripDays,
+                  days: 180,
+                  ...(selectedAirlines.length ? { airlines: selectedAirlines } : {}),
+                }),
               });
               if (res2.ok) {
                 const data2 = await res2.json();
@@ -434,6 +494,60 @@ const Index = () => {
                 </Label>
               </div>
 
+              {/* 항공사 선택 */}
+              <div className="flex items-center gap-3 h-10">
+                <span className="text-sm text-gray-700">항공사:</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="h-10 min-w-[200px] justify-between border-gray-200">
+                      <span className="truncate">
+                        {selectedAirlines.length
+                          ? `${selectedAirlines.length}개 선택`
+                          : "전체"}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto">
+                    <DropdownMenuLabel>항공사 필터</DropdownMenuLabel>
+                    <DropdownMenuCheckboxItem
+                      checked={selectedAirlines.length === 0}
+                      onCheckedChange={(checked) => {
+                        if (checked === true) setSelectedAirlines([]);
+                      }}
+                    >
+                      전체 보기
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuSeparator />
+                    {airlineOptions.length ? (
+                      airlineOptions.map((airline) => (
+                        <DropdownMenuCheckboxItem
+                          key={airline}
+                          checked={selectedAirlines.includes(airline)}
+                          onCheckedChange={(checked) => {
+                            setSelectedAirlines((prev) => {
+                              if (checked === true) {
+                                return prev.includes(airline) ? prev : [...prev, airline];
+                              }
+                              return prev.filter((a) => a !== airline);
+                            });
+                          }}
+                        >
+                          {airline}
+                        </DropdownMenuCheckboxItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1 text-xs text-gray-500">항공사 데이터 없음</div>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {selectedAirlines.length ? (
+                  <Button variant="ghost" size="sm" className="h-8 text-xs text-gray-600" onClick={() => setSelectedAirlines([])}>
+                    초기화
+                  </Button>
+                ) : null}
+              </div>
+
               {/* 정렬 */}
               <div className="flex items-center gap-3 h-10">
                 <span className="text-sm text-gray-700">정렬:</span>
@@ -464,6 +578,33 @@ const Index = () => {
                     isMobile={true}
                   />
                   
+                  {airlineOptions.length ? (
+                    <div className="pt-4 border-t border-gray-200">
+                      <h3 className="font-semibold text-sm mb-3 text-gray-900">항공사</h3>
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {airlineOptions.map((airline) => (
+                          <label key={airline} className="flex items-center gap-2 text-sm text-gray-700">
+                            <Checkbox
+                              checked={selectedAirlines.includes(airline)}
+                              onCheckedChange={(checked) => {
+                                setSelectedAirlines((prev) => {
+                                  if (checked === true) {
+                                    return prev.includes(airline) ? prev : [...prev, airline];
+                                  }
+                                  return prev.filter((a) => a !== airline);
+                                });
+                              }}
+                            />
+                            <span className="truncate">{airline}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <Button variant="ghost" size="sm" className="mt-2 px-2 text-sm text-gray-600" onClick={() => setSelectedAirlines([])}>
+                        전체 해제
+                      </Button>
+                    </div>
+                  ) : null}
+
                   {/* 고급 날짜 필터 */}
                   <div className="pt-4 border-t border-gray-200">
                     <h3 className="font-semibold text-sm mb-3 text-gray-900">여정 일정 (선택)</h3>
@@ -503,7 +644,8 @@ const Index = () => {
                     originalPrice={flight.originalPrice}
                     discount={flight.discount}
                     travelDates={flight.travelDates}
-                    collectedAt={(flight as any).collectedAt}
+                    collectedAt={flight.collectedAt}
+                    airline={flight.airline}
                     meta={flight.meta}
                     nonstop={directOnly}
                     onClick={() => handleFlightClick(flight)}
@@ -548,6 +690,7 @@ const Index = () => {
           refreshLoading={refreshingCodes.has(selectedFlight.code)}
           justRefreshed={justRefreshedCodes.has(selectedFlight.code)}
           nonstop={directOnly}
+          airline={selectedFlight.airline}
         />
       )}
     </div>

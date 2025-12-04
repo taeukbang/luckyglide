@@ -15,6 +15,7 @@ interface FlightCardProps {
   discount?: number | null;
   travelDates: string;
   collectedAt?: string | null;
+  airline?: string | null;
   meta?: {
     code?: string;
     tripDays?: number;
@@ -36,6 +37,7 @@ export const FlightCard = ({
   discount,
   travelDates,
   collectedAt,
+  airline,
   onClick,
   meta,
   onShowChart,
@@ -118,6 +120,7 @@ export const FlightCard = ({
     const right = fmt(b || a);
     return `${left}${sep}${right}`;
   };
+  const resolvedAirline = airline ?? meta?.airline ?? null;
   return (
     <Card 
       className={`group cursor-pointer transition-all duration-200 hover:shadow-md border-gray-200 ${justRefreshed ? 'lg-flash-outline' : ''}`}
@@ -178,6 +181,11 @@ export const FlightCard = ({
             {formatCollected(collectedAt) ? (
               <span className="text-[10px] text-gray-400 leading-tight mt-0.5">수집 {formatCollected(collectedAt)}</span>
             ) : null}
+          {resolvedAirline ? (
+            <span className="text-[11px] text-gray-500 leading-tight mt-0.5">
+              최저가 항공사: {resolvedAirline}
+            </span>
+          ) : null}
           </div>
         </div>
 
