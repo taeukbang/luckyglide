@@ -19,6 +19,7 @@ import { Calendar, Clock } from "lucide-react";
 import { buildMrtBookingUrl, addDaysIsoKST, applyMrtDeepLinkIfNeeded, resolveBookingUrlWithPartner } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
 import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@/lib/flags";
+import { getAirlineName } from "@/lib/airlines";
 
 interface FlightDetailDialogProps {
   open: boolean;
@@ -96,7 +97,7 @@ export const FlightDetailDialog = ({
               <DialogTitle className="text-2xl text-left text-gray-900">{city}</DialogTitle>
               <DialogDescription className="text-base text-left text-gray-600">{country}</DialogDescription>
               {airline ? (
-                <p className="text-xs text-gray-500 mt-1">최저가 항공사: {airline}</p>
+                <p className="text-xs text-gray-500 mt-1">최저가 항공사: {getAirlineName(airline) ?? airline}</p>
               ) : null}
             </div>
           </div>

@@ -1,0 +1,82 @@
+const AIRLINE_NAME_MAP: Record<string, string> = {
+  KE: "대한항공",
+  OZ: "아시아나항공",
+  "7C": "제주항공",
+  TW: "티웨이항공",
+  LJ: "진에어",
+  BX: "에어부산",
+  ZE: "이스타항공",
+  RS: "에어서울",
+  YN: "에어프레미아",
+  Z2: "필리핀 에어아시아",
+  ZH: "심천항공",
+  SQ: "싱가포르항공",
+  TR: "스쿠트",
+  CX: "캐세이퍼시픽",
+  KA: "캐세이드래곤",
+  BR: "에바항공",
+  CI: "중화항공",
+  MU: "중국동방항공",
+  CA: "중국국제항공",
+  CZ: "중국남방항공",
+  HU: "하이난항공",
+  MF: "샤먼항공",
+  HO: "춘추항공",
+  JL: "일본항공",
+  NH: "전일본공수",
+  MM: "피치항공",
+  GK: "제트스타 재팬",
+  ZG: "스카이마크",
+  VJ: "비엣젯항공",
+  VN: "베트남항공",
+  QH: "밤부항공",
+  QV: "라오항공",
+  FD: "타이에어아시아",
+  TG: "타이항공",
+  WE: "타이스마일",
+  PR: "필리핀항공",
+  "5J": "세부퍼시픽",
+  QF: "콴타스항공",
+  JQ: "젯스타",
+  EK: "에미레이트항공",
+  EY: "에티하드항공",
+  QR: "카타르항공",
+  TK: "터키항공",
+  BA: "영국항공",
+  AF: "에어프랑스",
+  KL: "KLM네덜란드항공",
+  LH: "루프트한자",
+  LX: "스위스항공",
+  OS: "오스트리아항공",
+  LO: "LOT폴란드항공",
+  AY: "핀에어",
+  SU: "아에로플로트",
+  DL: "델타항공",
+  AA: "아메리칸항공",
+  UA: "유나이티드항공",
+  AC: "에어캐나다",
+  HA: "하와이안항공",
+  NZ: "에어뉴질랜드",
+  VA: "버진오스트레일리아",
+  MH: "말레이시아항공",
+  BI: "로열브루나이항공",
+  FY: "파이어플라이",
+  GA: "가루다인도네시아",
+  AI: "에어인디아",
+  UK: "비스타라",
+  ET: "에티오피아항공",
+  KQ: "케냐항공",
+};
+
+export function getAirlineName(value?: string | null) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.toUpperCase();
+  return AIRLINE_NAME_MAP[normalized] ?? trimmed;
+}
+
+export function listKnownAirlines() {
+  return Object.keys(AIRLINE_NAME_MAP);
+}
+

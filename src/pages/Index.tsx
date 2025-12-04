@@ -35,6 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getAirlineName } from "@/lib/airlines";
 
 type LatestItem = {
   code: string;
@@ -99,7 +100,7 @@ const Index = () => {
   const [fixedRetIso, setFixedRetIso] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [selectedAirlines, setSelectedAirlines] = useState<string[]>([]);
-  const [airlineCatalog, setAirlineCatalog] = useState<string[]>([]);
+  const [airlineStats, setAirlineStats] = useState<Record<string, number>>({});
   
   useEffect(() => {
     const controller = new AbortController();
@@ -176,24 +177,34 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    setAirlineCatalog((prev) => {
-      const merged = new Set(prev);
-      for (const it of items) {
-        if (it.airline) merged.add(it.airline);
-      }
-      return Array.from(merged);
-    });
+    const counts: Record<string, number> = {};
+    for (const it of items) {
+      const raw = (it.airline ?? "").trim();
+      if (!raw) continue;
+      const normalized = /^[A-Za-z0-9]{1,3}$/.test(raw) ? raw.toUpperCase() : raw;
+      counts[normalized] = (counts[normalized] ?? 0) + 1;
+    }
+    setAirlineStats(counts);
   }, [items]);
 
-  const airlineOptions = useMemo(
-    () => [...airlineCatalog].sort((a, b) => a.localeCompare(b, "ko")),
-    [airlineCatalog]
-  );
+  const airlineOptions = useMemo(() => {
+    return Object.entries(airlineStats)
+      .map(([code, count]) => ({
+        code,
+        count,
+        label: getAirlineName(code) ?? code,
+      }))
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.label.localeCompare(b.label, "ko");
+      });
+  }, [airlineStats]);
 
   useEffect(() => {
     setSelectedAirlines((prev) => {
       if (!prev.length) return prev;
-      const next = prev.filter((air) => airlineOptions.includes(air));
+      const validCodes = new Set(airlineOptions.map((o) => o.code));
+      const next = prev.filter((code) => validCodes.has(code));
       return next.length === prev.length ? prev : next;
     });
   }, [airlineOptions]);
@@ -520,20 +531,21 @@ const Index = () => {
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuSeparator />
                     {airlineOptions.length ? (
-                      airlineOptions.map((airline) => (
+                      airlineOptions.map((option) => (
                         <DropdownMenuCheckboxItem
-                          key={airline}
-                          checked={selectedAirlines.includes(airline)}
+                          key={option.code}
+                          checked={selectedAirlines.includes(option.code)}
                           onCheckedChange={(checked) => {
                             setSelectedAirlines((prev) => {
                               if (checked === true) {
-                                return prev.includes(airline) ? prev : [...prev, airline];
+                                return prev.includes(option.code) ? prev : [...prev, option.code];
                               }
-                              return prev.filter((a) => a !== airline);
+                              return prev.filter((a) => a !== option.code);
                             });
                           }}
                         >
-                          {airline}
+                          <span className="flex-1 truncate">{option.label}</span>
+                          <span className="ml-2 text-[11px] text-gray-500">{option.count}건</span>
                         </DropdownMenuCheckboxItem>
                       ))
                     ) : (
@@ -582,20 +594,21 @@ const Index = () => {
                     <div className="pt-4 border-t border-gray-200">
                       <h3 className="font-semibold text-sm mb-3 text-gray-900">항공사</h3>
                       <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                        {airlineOptions.map((airline) => (
-                          <label key={airline} className="flex items-center gap-2 text-sm text-gray-700">
+                        {airlineOptions.map((option) => (
+                          <label key={option.code} className="flex items-center gap-2 text-sm text-gray-700">
                             <Checkbox
-                              checked={selectedAirlines.includes(airline)}
+                              checked={selectedAirlines.includes(option.code)}
                               onCheckedChange={(checked) => {
                                 setSelectedAirlines((prev) => {
                                   if (checked === true) {
-                                    return prev.includes(airline) ? prev : [...prev, airline];
+                                    return prev.includes(option.code) ? prev : [...prev, option.code];
                                   }
-                                  return prev.filter((a) => a !== airline);
+                                  return prev.filter((a) => a !== option.code);
                                 });
                               }}
                             />
-                            <span className="truncate">{airline}</span>
+                            <span className="flex-1 truncate">{option.label}</span>
+                            <span className="text-[11px] text-gray-500">{option.count}건</span>
                           </label>
                         ))}
                       </div>

@@ -5,6 +5,7 @@ import { gaEvent } from "@/lib/ga";
 import { Button } from "@/components/ui/button";
 import { Sparkline } from "./Sparkline";
 import { useEffect, useState } from "react";
+import { getAirlineName } from "@/lib/airlines";
 
 interface FlightCardProps {
   city: string;
@@ -121,6 +122,7 @@ export const FlightCard = ({
     return `${left}${sep}${right}`;
   };
   const resolvedAirline = airline ?? meta?.airline ?? null;
+  const displayAirline = getAirlineName(resolvedAirline) ?? resolvedAirline;
   return (
     <Card 
       className={`group cursor-pointer transition-all duration-200 hover:shadow-md border-gray-200 ${justRefreshed ? 'lg-flash-outline' : ''}`}
@@ -181,9 +183,9 @@ export const FlightCard = ({
             {formatCollected(collectedAt) ? (
               <span className="text-[10px] text-gray-400 leading-tight mt-0.5">수집 {formatCollected(collectedAt)}</span>
             ) : null}
-          {resolvedAirline ? (
+          {displayAirline ? (
             <span className="text-[11px] text-gray-500 leading-tight mt-0.5">
-              최저가 항공사: {resolvedAirline}
+              최저가 항공사: {displayAirline}
             </span>
           ) : null}
           </div>
