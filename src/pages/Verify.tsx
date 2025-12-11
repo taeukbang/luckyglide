@@ -117,7 +117,7 @@ export default function Verify() {
         const rm = String(ret.getMonth() + 1).padStart(2, "0");
         const rd = String(ret.getDate()).padStart(2, "0");
         const retStr = `${ry}-${rm}-${rd}`;
-        const r = await fetch("https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar", {
+        const r = await fetch("https://api3.myrealtrip.com/flight/api/price/calendar", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ from: "ICN", to: selectedCode, departureDate: depStr, period: tripDays, transfer: -1, international: true, airlines: ["All"] }),

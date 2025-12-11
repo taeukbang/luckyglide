@@ -28,7 +28,7 @@
 
 - **목표**: 프론트를 변경하지 않고 백엔드에서 MyRealTrip 캘린더 API를 호출해 가격 정보를 수집/저장
 - **브랜치**: `feat/myrealtrip-calendar`
-- **핵심 API**: `https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`
+- **핵심 API**: `https://api3.myrealtrip.com/flight/api/price/calendar`
 
 ## 디렉터리/파일
 
@@ -158,7 +158,7 @@ order by departure_date;
 
 ## 참고
 
-- 캘린더 API(운영): `https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`
+- 캘린더 API(운영): `https://api3.myrealtrip.com/flight/api/price/calendar`
 - 프론트엔드는 변경하지 않으며, 백엔드 API만 호출하도록 분리되어 있습니다.
 
 

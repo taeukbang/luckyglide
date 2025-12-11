@@ -22,7 +22,7 @@ export default async function handler(req: Request): Promise<Response> {
       const mm = String(dep.getMonth() + 1).padStart(2, "0");
       const dd = String(dep.getDate()).padStart(2, "0");
       const depStr = `${yyyy}-${mm}-${dd}`;
-      const url = `https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`;
+      const url = `https://api3.myrealtrip.com/flight/api/price/calendar`;
       const payload = { from, to, departureDate: depStr, period: tripDays, transfer, international, airlines };
       const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
       if (!r.ok) continue;

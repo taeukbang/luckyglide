@@ -23,7 +23,7 @@ export interface CalendarResponse {
 const BASE_URL = process.env.MRT_CAL_BASE ?? "https://api3.myrealtrip.com";
 
 export async function fetchCalendar(request: CalendarRequest): Promise<CalendarResponse> {
-  const url = `${BASE_URL}/pds/api/v1/flight/price/calendar`;
+  const url = `${BASE_URL}/flight/api/price/calendar`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

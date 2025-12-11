@@ -42,7 +42,7 @@ export default async function handler(req: Request): Promise<Response> {
       const depStr = formatIso(depReal);
       for (let len = minTripDays; len <= maxTripDays; len++) {
         const payload = { from: fromQ, to: toQ, departureDate: depStr, period: len, transfer: transferQ, international: true, airlines: ["All"] };
-        const r = await fetch(`https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+        const r = await fetch(`https://api3.myrealtrip.com/flight/api/price/calendar`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
         if (!r.ok) continue;
         const data = await r.json();
         const arr = data?.flightCalendarInfoResults ?? [];

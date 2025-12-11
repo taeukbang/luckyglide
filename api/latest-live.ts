@@ -47,7 +47,7 @@ export default async function handler(req: Request): Promise<Response> {
           const dep = new Date(base);
           dep.setDate(dep.getDate() + i);
           const depStr = formatIso(dep);
-          const url = `https://api3.myrealtrip.com/pds/api/v1/flight/price/calendar`;
+          const url = `https://api3.myrealtrip.com/flight/api/price/calendar`;
           const payload = { from, to: t.code, departureDate: depStr, period: len, transfer: -1, international: true, airlines: ["All"] };
           const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
           if (!r.ok) continue;
