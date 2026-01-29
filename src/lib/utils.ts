@@ -274,8 +274,8 @@ export async function resolveBookingUrlWithPartner(params: {
     }
     
     // 2. 실시간으로 MyLink 생성
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      console.log('[MyLink Debug] 예약 URL 생성 완료, MyLink 변환 시작:', bookingUrl.substring(0, 100) + '...');
+    if (typeof window !== 'undefined') {
+      console.log('[MyLink Debug] 예약 URL 생성 완료, MyLink 변환 시작:', bookingUrl?.substring(0, 100) + '...');
     }
     
     const mylink = await createMylinkRealtime(bookingUrl, partnerId);
@@ -288,9 +288,19 @@ export async function resolveBookingUrlWithPartner(params: {
     }
     
     // 3. MyLink 생성 실패 시 원본 예약 URL 반환 (fallback)
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      console.warn('[MyLink Debug] MyLink 생성 실패, 원본 예약 URL 사용');
+    if (typeof window !== 'undefined') {
+      console.warn('[MyLink Debug] MyLink 생성 실패, 원본 예약 URL 사용:', bookingUrl?.substring(0, 100));
     }
+    
+    // bookingUrl이 없으면 기본 예약 URL 생성
+    if (!bookingUrl) {
+      const web = buildMrtBookingUrl(
+        { from, to, toNameKo, depdt, rtndt: rtndt ?? depdt },
+        { nonstop: !!nonstop }
+      );
+      return applyMrtDeepLinkIfNeeded(appendUtm(web));
+    }
+    
     return applyMrtDeepLinkIfNeeded(bookingUrl);
   }
   

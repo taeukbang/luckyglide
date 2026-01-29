@@ -236,8 +236,24 @@ export const FlightCard = ({
                     rtndt: retIso,
                     nonstop: Boolean(nonstop),
                   });
-                  if (finalUrl) window.open(finalUrl, "_blank", "noopener");
-                } catch {}
+                  if (finalUrl) {
+                    window.open(finalUrl, "_blank", "noopener");
+                  } else {
+                    console.error('[예약 URL 오류] finalUrl이 null입니다.');
+                  }
+                } catch (error) {
+                  console.error('[예약 URL 오류]', error);
+                  // 에러 발생 시에도 기본 예약 URL 사용
+                  try {
+                    const fallbackUrl = buildMrtBookingUrl(
+                      { from: "ICN", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso },
+                      { nonstop: Boolean(nonstop) }
+                    );
+                    if (fallbackUrl) window.open(fallbackUrl, "_blank", "noopener");
+                  } catch (fallbackError) {
+                    console.error('[Fallback URL 오류]', fallbackError);
+                  }
+                }
               }}
             >
               <Button size="sm" className="text-xs h-7 px-3 bg-gray-900 hover:bg-gray-800 text-white">
