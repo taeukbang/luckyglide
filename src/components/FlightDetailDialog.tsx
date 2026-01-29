@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,8 @@ import {
 import { PriceChart } from "./PriceChart";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock } from "lucide-react";
-import { buildMrtBookingUrl, addDaysIsoKST, applyMrtDeepLinkIfNeeded, resolveBookingUrlWithPartner } from "@/lib/utils";
+import { buildMrtBookingUrl, addDaysIsoKST, applyMrtDeepLinkIfNeeded, resolveBookingUrlWithPartner, createMylinkRealtime } from "@/lib/utils";
+import { extractPartnerIdFromPath } from "@/lib/partner-config";
 import { gaEvent } from "@/lib/ga";
 import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl } from "@/lib/flags";
 import { getAirlineName } from "@/lib/airlines";
@@ -61,11 +62,83 @@ export const FlightDetailDialog = ({
 }: FlightDetailDialogProps) => {
   const [tripDuration, setTripDuration] = useState(String(tripDays));
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [prefetchedMylink, setPrefetchedMylink] = useState<string | null>(null);
+  const prefetchAbortRef = useRef<AbortController | null>(null);
+  
   // 부모 tripDays가 바뀌면 내부 선택값도 동기화 (카드의 여행일수 반영)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   if (String(tripDays) !== tripDuration) {
     setTripDuration(String(tripDays));
   }
+
+  // 다이얼로그가 열릴 때 미리 MyLink 생성 (프리페칭)
+  useEffect(() => {
+    if (!open || !code) {
+      setPrefetchedMylink(null);
+      if (prefetchAbortRef.current) {
+        prefetchAbortRef.current.abort();
+      }
+      return;
+    }
+
+    // 파트너 경로인지 확인
+    const partnerId = extractPartnerIdFromPath();
+    if (!partnerId) {
+      return; // 파트너 경로가 아니면 프리페칭 불필요
+    }
+
+    // 최저가 날짜 계산
+    const best = (priceData || []).reduce<{date?: string; price?: number}>((acc, cur) => {
+      if (!acc.date || (typeof acc.price === 'number' ? cur.price < acc.price! : true)) return { date: cur.date, price: cur.price };
+      return acc;
+    }, {});
+    if (!best.date) return;
+
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const toIso = (mmdd: string) => {
+      const [mm, dd] = mmdd.split("/");
+      const month = parseInt(mm, 10);
+      const day = parseInt(dd, 10);
+      let year = yyyy;
+      const candidate = new Date(year, month - 1, day);
+      if (candidate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+        year += 1;
+      }
+      return `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    };
+    const depIso = toIso(best.date);
+    const days = parseInt(tripDuration, 10) || 3;
+    const retIso = addDaysIsoKST(depIso, days - 1);
+
+    // 예약 URL 생성
+    const bookingUrl = buildMrtBookingUrl(
+      { from: "ICN", to: code, toNameKo: city, depdt: depIso, rtndt: retIso },
+      { nonstop: Boolean(nonstop) }
+    );
+
+    // 백그라운드에서 MyLink 생성 시작
+    const controller = new AbortController();
+    prefetchAbortRef.current = controller;
+
+    (async () => {
+      try {
+        const mylink = await createMylinkRealtime(bookingUrl, partnerId);
+        if (!controller.signal.aborted && mylink) {
+          console.log('[MyLink 프리페칭] ✅ 성공:', mylink.substring(0, 50) + '...');
+          setPrefetchedMylink(mylink);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.log('[MyLink 프리페칭] 실패 (무시됨)');
+        }
+      }
+    })();
+
+    return () => {
+      controller.abort();
+    };
+  }, [open, code, city, priceData, tripDuration, nonstop]);
 
   const minPrice = priceData.length ? Math.min(...priceData.map(d => d.price)) : 0;
   const maxPrice = priceData.length ? Math.max(...priceData.map(d => d.price)) : 0;
@@ -214,9 +287,16 @@ export const FlightDetailDialog = ({
                 setBookingLoading(true);
                 
                 try {
+                  // 프리페칭된 MyLink가 있으면 즉시 사용
+                  if (prefetchedMylink) {
+                    console.log('[최저가 예약하기] ✅ 프리페칭된 MyLink 사용:', prefetchedMylink.substring(0, 50) + '...');
+                    window.location.href = applyMrtDeepLinkIfNeeded(prefetchedMylink);
+                    return;
+                  }
+
                   console.log('[최저가 예약하기] URL 생성 시작:', { code, city, depdt: depIso, rtndt: retIso, nonstop: Boolean(nonstop) });
                   
-                  // URL 준비
+                  // 프리페칭이 없거나 아직 완료되지 않은 경우 일반 로직 사용
                   const finalUrl = await resolveBookingUrlWithPartner({
                     from: "ICN",
                     to: code,

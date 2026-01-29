@@ -7,7 +7,7 @@
   ],
   "functions": {
     "api/mrt/partner/mylink.ts": {
-      "maxDuration": 30
+      "maxDuration": 10
     }
   }
 }
