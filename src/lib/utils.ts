@@ -165,6 +165,10 @@ export async function fetchMrtPartnerLandingUrl(input: {
 // ---- 마이링크 실시간 생성 API helper (frontend) ----
 // 예약 URL을 받아서 실시간으로 MyLink로 변환
 export async function createMylinkRealtime(targetUrl: string, partnerId: string): Promise<string | null> {
+  if (typeof window !== 'undefined') {
+    console.log('[MyLink 생성 시작]', { partnerId, targetUrl: targetUrl.substring(0, 100) + '...' });
+  }
+  
   try {
     const res = await fetch("/api/mrt/partner/mylink", {
       method: "POST",
@@ -181,6 +185,8 @@ export async function createMylinkRealtime(targetUrl: string, partnerId: string)
         console.warn(`[MyLink 생성 타임아웃] MyRealTrip API 응답이 느려서 원본 예약 URL을 사용합니다.`);
       } else if (res.status === 503 || errorMsg.includes('Network error') || errorMsg.includes('Unable to connect')) {
         console.warn(`[MyLink 생성 실패 - 네트워크 문제] 원본 예약 URL을 사용합니다.`);
+      } else if (res.status === 500 && errorData?.error?.includes('API key not found')) {
+        console.error(`[MyLink 생성 실패 - API 키 없음] 파트너 ${partnerId}의 API 키가 설정되지 않았습니다.`);
       } else {
         console.warn(`[MyLink 생성 실패] ${res.status}:`, errorData);
       }
@@ -189,7 +195,16 @@ export async function createMylinkRealtime(targetUrl: string, partnerId: string)
     
     const data = await res.json().catch(() => ({}));
     const mylink = data?.data?.mylink as string | undefined;
-    return mylink || null;
+    
+    if (mylink) {
+      if (typeof window !== 'undefined') {
+        console.log('[MyLink 생성 성공]', mylink.substring(0, 100) + '...');
+      }
+      return mylink;
+    } else {
+      console.warn('[MyLink 생성 실패] 응답에 mylink가 없습니다:', data);
+      return null;
+    }
   } catch (e: any) {
     console.error(`[MyLink 생성 예외]:`, e?.message || e);
     return null;
