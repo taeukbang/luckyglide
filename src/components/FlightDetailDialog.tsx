@@ -210,6 +210,8 @@ export const FlightDetailDialog = ({
                 e.preventDefault();
                 
                 try {
+                  console.log('[최저가 예약하기] URL 생성 시작:', { code, city, depdt: depIso, rtndt: retIso, nonstop: Boolean(nonstop) });
+                  
                   // URL 준비
                   const finalUrl = await resolveBookingUrlWithPartner({
                     from: "ICN",
@@ -221,6 +223,8 @@ export const FlightDetailDialog = ({
                   });
                   
                   if (finalUrl) {
+                    console.log('[최저가 예약하기] 최종 URL:', finalUrl);
+                    console.log('[최저가 예약하기] URL 타입:', finalUrl.includes('mylink') ? 'MyLink' : '일반 예약 URL');
                     // 현재 창에서 예약 페이지로 이동
                     window.location.href = finalUrl;
                   } else {
@@ -235,6 +239,7 @@ export const FlightDetailDialog = ({
                       { nonstop: Boolean(nonstop) }
                     );
                     if (fallbackUrl) {
+                      console.log('[최저가 예약하기] Fallback URL:', fallbackUrl);
                       window.location.href = fallbackUrl;
                     }
                   } catch (fallbackError) {
