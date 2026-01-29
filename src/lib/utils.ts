@@ -289,26 +289,29 @@ export async function resolveBookingUrlWithPartner(params: {
       return applyMrtDeepLinkIfNeeded(appendUtm(web));
     }
     
-    // 2. 실시간으로 MyLink 생성 (반드시 완료될 때까지 대기)
+    // 2. 즉시 원본 URL 반환하고, 백그라운드에서 MyLink 생성 시도
     if (typeof window !== 'undefined') {
-      console.log('[MyLink Debug] 예약 URL 생성 완료, MyLink 변환 시작:', bookingUrl?.substring(0, 100) + '...');
+      console.log('[MyLink Debug] 예약 URL 생성 완료, 백그라운드에서 MyLink 생성 시작:', bookingUrl?.substring(0, 100) + '...');
+      
+      // 백그라운드에서 MyLink 생성 시도 (비동기, await 안 함)
+      createMylinkRealtime(bookingUrl, partnerId).then((mylink) => {
+        if (mylink) {
+          console.log('[MyLink Debug] ✅ 백그라운드 MyLink 생성 성공:', mylink.substring(0, 100) + '...');
+          // 현재 페이지가 예약 페이지인 경우에만 리다이렉트
+          const currentUrl = window.location.href;
+          if (currentUrl.includes('flights.myrealtrip.com')) {
+            console.log('[MyLink Debug] 예약 페이지로 리다이렉트:', mylink.substring(0, 50) + '...');
+            window.location.href = applyMrtDeepLinkIfNeeded(mylink);
+          }
+        }
+      }).catch((error) => {
+        console.warn('[MyLink Debug] 백그라운드 MyLink 생성 실패:', error);
+      });
     }
     
-    // MyLink 생성이 완료될 때까지 대기 (Vercel 9초 타임아웃 내)
-    const mylink = await createMylinkRealtime(bookingUrl, partnerId);
-    
-    if (mylink) {
-      if (typeof window !== 'undefined') {
-        console.log('[MyLink Debug] ✅ MyLink 생성 성공:', mylink.substring(0, 100) + '...');
-      }
-      return applyMrtDeepLinkIfNeeded(mylink);
-    }
-    
-    // 3. MyLink 생성 실패 시 원본 예약 URL 반환 (fallback)
-    // 하지만 파트너 추적이 적용되지 않으므로 경고
+    // 즉시 원본 예약 URL 반환 (사용자는 바로 이동)
     if (typeof window !== 'undefined') {
-      console.error('[MyLink Debug] ❌ MyLink 생성 실패 - 파트너 추적이 적용되지 않습니다.');
-      console.warn('[MyLink Debug] ⚠️ 원본 예약 URL로 이동합니다:', bookingUrl?.substring(0, 100));
+      console.log('[MyLink Debug] 즉시 원본 예약 URL로 이동, 백그라운드에서 MyLink 생성 중...');
     }
     
     // bookingUrl이 없으면 기본 예약 URL 생성
