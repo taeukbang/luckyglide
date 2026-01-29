@@ -60,6 +60,7 @@ export const FlightDetailDialog = ({
   airline,
 }: FlightDetailDialogProps) => {
   const [tripDuration, setTripDuration] = useState(String(tripDays));
+  const [bookingLoading, setBookingLoading] = useState(false);
   // 부모 tripDays가 바뀌면 내부 선택값도 동기화 (카드의 여행일수 반영)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   if (String(tripDays) !== tripDuration) {
@@ -209,6 +210,9 @@ export const FlightDetailDialog = ({
                 gaEvent('click_detail', { code, city, depdt: depIso, rtndt: retIso, nonstop: Boolean(nonstop), price: best.price, tripDays: days });
                 e.preventDefault();
                 
+                if (bookingLoading) return; // 이미 로딩 중이면 무시
+                setBookingLoading(true);
+                
                 try {
                   console.log('[최저가 예약하기] URL 생성 시작:', { code, city, depdt: depIso, rtndt: retIso, nonstop: Boolean(nonstop) });
                   
@@ -229,9 +233,11 @@ export const FlightDetailDialog = ({
                     window.location.href = finalUrl;
                   } else {
                     console.error('[예약 URL 오류] finalUrl이 null입니다.');
+                    setBookingLoading(false);
                   }
                 } catch (error) {
                   console.error('[예약 URL 오류]', error);
+                  setBookingLoading(false);
                   // 에러 발생 시에도 기본 예약 URL 사용
                   try {
                     const fallbackUrl = buildMrtBookingUrl(
@@ -248,7 +254,9 @@ export const FlightDetailDialog = ({
                 }
               }}
             >
-              <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white px-4" size="lg">최저가 예약하기</Button>
+              <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white px-4" size="lg" disabled={bookingLoading}>
+                {bookingLoading ? '예약 페이지 준비 중...' : '최저가 예약하기'}
+              </Button>
             </a>
             <Button variant="outline" size="lg" className="border-gray-200 text-gray-700 hover:bg-gray-50 px-6" onClick={() => onOpenChange(false)}>
               닫기
