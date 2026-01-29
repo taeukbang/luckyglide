@@ -1,6 +1,6 @@
 import { emojiFromCountryCode, flagUrlFromCountryCode, fallbackFlagUrl, codeToCountry } from "@/lib/flags";
 import { Card, CardContent } from "@/components/ui/card";
-import { buildMrtBookingUrl, weekdayKo, applyMrtDeepLinkIfNeeded, resolveBookingUrlWithPartner } from "@/lib/utils";
+import { weekdayKo } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
 import { Button } from "@/components/ui/button";
 import { Sparkline } from "./Sparkline";
@@ -211,75 +211,16 @@ export const FlightCard = ({
             <Button size="sm" className="text-xs h-7 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200" onClick={(e)=>{ e.stopPropagation(); onShowChart?.(); }}>
               일자별 가격 그래프
             </Button>
-            <a
-              href="#"
-              target="_blank"
-              onClick={async (e)=>{
-                const [depIso, retIsoRaw] = travelDates.split("~");
-                const retIso = retIsoRaw?.trim() || depIso;
-                gaEvent('click_card', {
-                  code: meta?.code,
-                  city,
-                  depdt: depIso,
-                  rtndt: retIso,
-                  nonstop: Boolean(nonstop),
-                  price: price ?? undefined,
-                  tripDays: meta?.tripDays,
-                });
-                e.preventDefault();
-                
-                try {
-                  // 로딩 페이지를 먼저 열기 (팝업 차단 방지)
-                  const loadingUrl = `/booking-loading.html?url=${encodeURIComponent('about:blank')}`;
-                  const newWindow = window.open(loadingUrl, "_blank", "noopener");
-                  if (!newWindow) {
-                    console.warn('[예약하기] 팝업이 차단되었습니다.');
-                    return;
-                  }
-                  
-                  // URL 준비
-                  const finalUrl = await resolveBookingUrlWithPartner({
-                    from: "ICN",
-                    to: meta?.code ?? "",
-                    toNameKo: city ?? "",
-                    depdt: depIso,
-                    rtndt: retIso,
-                    nonstop: Boolean(nonstop),
-                  });
-                  
-                  if (finalUrl) {
-                    console.log('[예약하기] URL 준비 완료, 리다이렉트:', finalUrl.substring(0, 100));
-                    // 로딩 페이지에서 실제 URL로 리다이렉트
-                    newWindow.location.href = `/booking-loading.html?url=${encodeURIComponent(finalUrl)}`;
-                  } else {
-                    console.error('[예약 URL 오류] finalUrl이 null입니다.');
-                    newWindow.close();
-                  }
-                } catch (error) {
-                  console.error('[예약 URL 오류]', error);
-                  // 에러 발생 시에도 기본 예약 URL 사용
-                  try {
-                    const fallbackUrl = buildMrtBookingUrl(
-                      { from: "ICN", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso },
-                      { nonstop: Boolean(nonstop) }
-                    );
-                    if (fallbackUrl) {
-                      const newWindow = window.open(`/booking-loading.html?url=${encodeURIComponent(fallbackUrl)}`, "_blank", "noopener");
-                      if (!newWindow) {
-                        // 팝업 차단 시 현재 창에서 이동
-                        window.location.href = fallbackUrl;
-                      }
-                    }
-                  } catch (fallbackError) {
-                    console.error('[Fallback URL 오류]', fallbackError);
-                  }
-                }
+            <Button 
+              size="sm" 
+              className="text-xs h-7 px-3 bg-gray-900 hover:bg-gray-800 text-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
               }}
             >
-              <Button size="sm" className="text-xs h-7 px-3 bg-gray-900 hover:bg-gray-800 text-white">
-                예약하기
-              </Button>
-            </a>
+              예약하기
+            </Button>
           </div>
         </div>
         {openSpark && (
