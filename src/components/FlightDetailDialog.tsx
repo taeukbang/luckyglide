@@ -210,14 +210,6 @@ export const FlightDetailDialog = ({
                 e.preventDefault();
                 
                 try {
-                  // 로딩 페이지를 먼저 열기 (팝업 차단 방지)
-                  const loadingUrl = `/booking-loading.html?url=${encodeURIComponent('about:blank')}`;
-                  const newWindow = window.open(loadingUrl, "_blank", "noopener");
-                  if (!newWindow) {
-                    console.warn('[예약하기] 팝업이 차단되었습니다.');
-                    return;
-                  }
-                  
                   // URL 준비
                   const finalUrl = await resolveBookingUrlWithPartner({
                     from: "ICN",
@@ -229,10 +221,10 @@ export const FlightDetailDialog = ({
                   });
                   
                   if (finalUrl) {
-                    // 로딩 페이지에서 실제 URL로 리다이렉트
-                    newWindow.location.href = `/booking-loading.html?url=${encodeURIComponent(finalUrl)}`;
+                    // 현재 창에서 예약 페이지로 이동
+                    window.location.href = finalUrl;
                   } else {
-                    newWindow.close();
+                    console.error('[예약 URL 오류] finalUrl이 null입니다.');
                   }
                 } catch (error) {
                   console.error('[예약 URL 오류]', error);
@@ -243,11 +235,7 @@ export const FlightDetailDialog = ({
                       { nonstop: Boolean(nonstop) }
                     );
                     if (fallbackUrl) {
-                      const newWindow = window.open(`/booking-loading.html?url=${encodeURIComponent(fallbackUrl)}`, "_blank", "noopener");
-                      if (!newWindow) {
-                        // 팝업 차단 시 현재 창에서 이동
-                        window.location.href = fallbackUrl;
-                      }
+                      window.location.href = fallbackUrl;
                     }
                   } catch (fallbackError) {
                     console.error('[Fallback URL 오류]', fallbackError);
