@@ -296,7 +296,28 @@ export const FlightDetailDialog = ({
 
                   console.log('[최저가 예약하기] URL 생성 시작:', { code, city, depdt: depIso, rtndt: retIso, nonstop: Boolean(nonstop) });
                   
-                  // 프리페칭이 없거나 아직 완료되지 않은 경우 일반 로직 사용
+                  // 프리페칭이 없거나 아직 완료되지 않은 경우
+                  // 프리페칭이 진행 중이면 완료될 때까지 기다리기 (최대 8초)
+                  const partnerId = extractPartnerIdFromPath();
+                  if (partnerId && prefetchAbortRef.current && !prefetchAbortRef.current.signal.aborted) {
+                    console.log('[최저가 예약하기] 프리페칭이 진행 중입니다. 완료될 때까지 대기...');
+                    const bookingUrl = buildMrtBookingUrl(
+                      { from: "ICN", to: code, toNameKo: city, depdt: depIso, rtndt: retIso },
+                      { nonstop: Boolean(nonstop) }
+                    );
+                    const prefetchPromise = createMylinkRealtime(bookingUrl, partnerId);
+                    const prefetchTimeout = new Promise<string | null>((resolve) => {
+                      setTimeout(() => resolve(null), 8000);
+                    });
+                    const prefetched = await Promise.race([prefetchPromise, prefetchTimeout]);
+                    if (prefetched) {
+                      console.log('[최저가 예약하기] ✅ 프리페칭 완료, MyLink 사용:', prefetched.substring(0, 50) + '...');
+                      window.location.href = applyMrtDeepLinkIfNeeded(prefetched);
+                      return;
+                    }
+                  }
+                  
+                  // 일반 로직 사용
                   const finalUrl = await resolveBookingUrlWithPartner({
                     from: "ICN",
                     to: code,
