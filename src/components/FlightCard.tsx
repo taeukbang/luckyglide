@@ -237,7 +237,11 @@ export const FlightCard = ({
                     nonstop: Boolean(nonstop),
                   });
                   if (finalUrl) {
-                    window.open(finalUrl, "_blank", "noopener");
+                    console.log('[예약하기] URL 열기:', finalUrl.substring(0, 100));
+                    const newWindow = window.open(finalUrl, "_blank", "noopener");
+                    if (!newWindow) {
+                      console.warn('[예약하기] 팝업이 차단되었습니다. URL을 직접 복사하세요:', finalUrl);
+                    }
                   } else {
                     console.error('[예약 URL 오류] finalUrl이 null입니다.');
                   }

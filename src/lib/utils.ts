@@ -294,6 +294,7 @@ export async function resolveBookingUrlWithPartner(params: {
     
     // bookingUrl이 없으면 기본 예약 URL 생성
     if (!bookingUrl) {
+      console.warn('[MyLink Debug] bookingUrl이 null, 기본 예약 URL 생성');
       const web = buildMrtBookingUrl(
         { from, to, toNameKo, depdt, rtndt: rtndt ?? depdt },
         { nonstop: !!nonstop }
@@ -301,7 +302,11 @@ export async function resolveBookingUrlWithPartner(params: {
       return applyMrtDeepLinkIfNeeded(appendUtm(web));
     }
     
-    return applyMrtDeepLinkIfNeeded(bookingUrl);
+    const finalUrl = applyMrtDeepLinkIfNeeded(bookingUrl);
+    if (typeof window !== 'undefined') {
+      console.log('[MyLink Debug] 최종 URL 반환:', finalUrl?.substring(0, 100));
+    }
+    return finalUrl;
   }
   
   // 일반 경로인 경우 기존 로직 그대로 실행
