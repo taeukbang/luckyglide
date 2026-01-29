@@ -176,11 +176,13 @@ export async function createMylinkRealtime(targetUrl: string, partnerId: string)
       const errorData = await res.json().catch(() => ({}));
       const errorMsg = errorData?.error || errorData?.details || `HTTP ${res.status}`;
       
-      // 네트워크 에러인 경우 사용자 친화적 메시지
-      if (res.status === 503 || errorMsg.includes('Network error') || errorMsg.includes('Unable to connect')) {
-        console.warn(`[MyLink 생성 실패 - 네트워크 문제] 로컬 환경에서 MyRealTrip API에 접속할 수 없습니다. Vercel 배포 후 정상 작동할 수 있습니다.`);
+      // 타임아웃 에러인 경우 조용히 처리 (fallback으로 진행)
+      if (res.status === 504 || errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
+        console.warn(`[MyLink 생성 타임아웃] MyRealTrip API 응답이 느려서 원본 예약 URL을 사용합니다.`);
+      } else if (res.status === 503 || errorMsg.includes('Network error') || errorMsg.includes('Unable to connect')) {
+        console.warn(`[MyLink 생성 실패 - 네트워크 문제] 원본 예약 URL을 사용합니다.`);
       } else {
-        console.error(`[MyLink 생성 실패] ${res.status}:`, errorData);
+        console.warn(`[MyLink 생성 실패] ${res.status}:`, errorData);
       }
       return null;
     }

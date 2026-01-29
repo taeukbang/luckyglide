@@ -1,6 +1,6 @@
 export const config = { 
   runtime: "nodejs",
-  maxDuration: 30, // Vercel 타임아웃 30초로 설정 (무료 플랜은 10초 제한일 수 있음)
+  maxDuration: 10, // Vercel 무료 플랜은 10초 제한
 };
 
 function corsHeaders() {
@@ -37,9 +37,9 @@ export default async function handler(req: Request): Promise<Response> {
     // 마이링크 생성 API 호출
     const apiUrl = "https://partner-ext-api.myrealtrip.com/v1/mylink";
     
-    // 타임아웃 설정 (20초)
+    // 타임아웃 설정 (5초 - 빠르게 실패하여 fallback으로 진행)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
     try {
       const upstream = await fetch(apiUrl, {
