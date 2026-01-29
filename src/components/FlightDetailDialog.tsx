@@ -255,7 +255,7 @@ export const FlightDetailDialog = ({
               }}
             >
               <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white px-4" size="lg" disabled={bookingLoading}>
-                {bookingLoading ? '예약 링크 생성 중...' : '최저가 예약하기'}
+                최저가 예약하기
               </Button>
             </a>
             <Button variant="outline" size="lg" className="border-gray-200 text-gray-700 hover:bg-gray-50 px-6" onClick={() => onOpenChange(false)}>
