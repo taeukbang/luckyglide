@@ -289,19 +289,13 @@ export async function resolveBookingUrlWithPartner(params: {
       return applyMrtDeepLinkIfNeeded(appendUtm(web));
     }
     
-    // 2. 실시간으로 MyLink 생성 (타임아웃과 경쟁)
+    // 2. 실시간으로 MyLink 생성 (반드시 완료될 때까지 대기)
     if (typeof window !== 'undefined') {
       console.log('[MyLink Debug] 예약 URL 생성 완료, MyLink 변환 시작:', bookingUrl?.substring(0, 100) + '...');
     }
     
-    // 3초 타임아웃으로 빠르게 실패하고 원본 URL로 이동
-    // 백그라운드에서 MyLink 생성 시도하고, 생성되면 리다이렉트
-    const mylinkPromise = createMylinkRealtime(bookingUrl, partnerId);
-    const timeoutPromise = new Promise<string | null>((resolve) => {
-      setTimeout(() => resolve(null), 3000); // 3초 후 타임아웃
-    });
-    
-    const mylink = await Promise.race([mylinkPromise, timeoutPromise]);
+    // MyLink 생성이 완료될 때까지 대기 (Vercel 9초 타임아웃 내)
+    const mylink = await createMylinkRealtime(bookingUrl, partnerId);
     
     if (mylink) {
       if (typeof window !== 'undefined') {
@@ -310,24 +304,11 @@ export async function resolveBookingUrlWithPartner(params: {
       return applyMrtDeepLinkIfNeeded(mylink);
     }
     
-    // 3. MyLink 생성이 3초 내에 완료되지 않으면 원본 예약 URL 반환
-    // 백그라운드에서 계속 MyLink 생성 시도
+    // 3. MyLink 생성 실패 시 원본 예약 URL 반환 (fallback)
+    // 하지만 파트너 추적이 적용되지 않으므로 경고
     if (typeof window !== 'undefined') {
-      console.warn('[MyLink Debug] ⚠️ MyLink 생성이 3초 내에 완료되지 않아 원본 예약 URL을 사용합니다.');
-      console.warn('[MyLink Debug] ⚠️ 백그라운드에서 MyLink 생성 시도 중...');
-      
-      // 백그라운드에서 MyLink 생성 시도
-      mylinkPromise.then((bgMylink) => {
-        if (bgMylink) {
-          console.log('[MyLink Debug] ✅ 백그라운드 MyLink 생성 성공, 리다이렉트:', bgMylink.substring(0, 100) + '...');
-          // 현재 페이지가 예약 페이지가 아닌 경우에만 리다이렉트
-          if (window.location.href.includes('flights.myrealtrip.com')) {
-            window.location.href = applyMrtDeepLinkIfNeeded(bgMylink);
-          }
-        }
-      }).catch(() => {
-        // 백그라운드 생성 실패는 무시
-      });
+      console.error('[MyLink Debug] ❌ MyLink 생성 실패 - 파트너 추적이 적용되지 않습니다.');
+      console.warn('[MyLink Debug] ⚠️ 원본 예약 URL로 이동합니다:', bookingUrl?.substring(0, 100));
     }
     
     // bookingUrl이 없으면 기본 예약 URL 생성
