@@ -208,6 +208,13 @@ export const FlightDetailDialog = ({
                 const retIso = addDaysIsoKST(depIso, days - 1);
                 gaEvent('click_detail', { code, city, depdt: depIso, rtndt: retIso, nonstop: Boolean(nonstop), price: best.price, tripDays: days });
                 e.preventDefault();
+                // 팝업 차단 방지: 클릭 이벤트 내에서 즉시 빈 창 열기
+                const newWindow = window.open("about:blank", "_blank", "noopener");
+                if (!newWindow) {
+                  console.warn('[예약하기] 팝업이 차단되었습니다.');
+                  return;
+                }
+                
                 try {
                   const finalUrl = await resolveBookingUrlWithPartner({
                     from: "ICN",
@@ -217,8 +224,15 @@ export const FlightDetailDialog = ({
                     rtndt: retIso,
                     nonstop: Boolean(nonstop),
                   });
-                  if (finalUrl) window.open(finalUrl, "_blank", "noopener");
-                } catch {}
+                  if (finalUrl) {
+                    newWindow.location.href = finalUrl;
+                  } else {
+                    newWindow.close();
+                  }
+                } catch (error) {
+                  console.error('[예약 URL 오류]', error);
+                  if (newWindow) newWindow.close();
+                }
               }}
             >
               <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white px-4" size="lg">최저가 예약하기</Button>

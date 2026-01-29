@@ -227,6 +227,13 @@ export const FlightCard = ({
                   tripDays: meta?.tripDays,
                 });
                 e.preventDefault();
+                // 팝업 차단 방지: 클릭 이벤트 내에서 즉시 빈 창 열기
+                const newWindow = window.open("about:blank", "_blank", "noopener");
+                if (!newWindow) {
+                  console.warn('[예약하기] 팝업이 차단되었습니다.');
+                  return;
+                }
+                
                 try {
                   const finalUrl = await resolveBookingUrlWithPartner({
                     from: "ICN",
@@ -238,12 +245,10 @@ export const FlightCard = ({
                   });
                   if (finalUrl) {
                     console.log('[예약하기] URL 열기:', finalUrl.substring(0, 100));
-                    const newWindow = window.open(finalUrl, "_blank", "noopener");
-                    if (!newWindow) {
-                      console.warn('[예약하기] 팝업이 차단되었습니다. URL을 직접 복사하세요:', finalUrl);
-                    }
+                    newWindow.location.href = finalUrl;
                   } else {
                     console.error('[예약 URL 오류] finalUrl이 null입니다.');
+                    newWindow.close();
                   }
                 } catch (error) {
                   console.error('[예약 URL 오류]', error);
@@ -253,9 +258,14 @@ export const FlightCard = ({
                       { from: "ICN", to: meta?.code ?? "", toNameKo: city ?? "", depdt: depIso, rtndt: retIso },
                       { nonstop: Boolean(nonstop) }
                     );
-                    if (fallbackUrl) window.open(fallbackUrl, "_blank", "noopener");
+                    if (fallbackUrl) {
+                      newWindow.location.href = fallbackUrl;
+                    } else {
+                      newWindow.close();
+                    }
                   } catch (fallbackError) {
                     console.error('[Fallback URL 오류]', fallbackError);
+                    newWindow.close();
                   }
                 }
               }}
