@@ -149,7 +149,10 @@ export async function fetchMrtPartnerLandingUrl(input: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // 500 에러는 조용히 무시 (fallback으로 진행)
+      return null;
+    }
     const data = await res.json().catch(() => ({}));
     const url = data?.data?.url as string | undefined;
     const gid = data?.data?.gid as number | undefined;

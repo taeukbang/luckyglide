@@ -4,7 +4,12 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/mrt/partner/mylink.ts": {
+      "maxDuration": 30
+    }
+  }
 }
 
 

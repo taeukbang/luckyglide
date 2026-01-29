@@ -1,6 +1,6 @@
 export const config = { 
-  runtime: "nodejs", // edge runtime은 타임아웃이 짧아서 nodejs로 변경
-  maxDuration: 30, // Vercel 타임아웃 30초로 설정
+  runtime: "nodejs",
+  maxDuration: 30, // Vercel 타임아웃 30초로 설정 (무료 플랜은 10초 제한일 수 있음)
 };
 
 function corsHeaders() {
@@ -37,27 +37,40 @@ export default async function handler(req: Request): Promise<Response> {
     // 마이링크 생성 API 호출
     const apiUrl = "https://partner-ext-api.myrealtrip.com/v1/mylink";
     
-    // body에 targetUrl 포함
-    const upstream = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ targetUrl }),
-    });
-    
-    const text = await upstream.text();
-    
-    if (!upstream.ok) {
-      return json({ error: `mylink creation error ${upstream.status}`, body: text }, 502);
-    }
+    // 타임아웃 설정 (20초)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
     
     try {
-      const jsonObj = JSON.parse(text);
-      return json(jsonObj);
-    } catch {
-      return json({ error: "invalid upstream json", body: text }, 502);
+      const upstream = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ targetUrl }),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      const text = await upstream.text();
+      
+      if (!upstream.ok) {
+        return json({ error: `mylink creation error ${upstream.status}`, body: text }, 502);
+      }
+      
+      try {
+        const jsonObj = JSON.parse(text);
+        return json(jsonObj);
+      } catch {
+        return json({ error: "invalid upstream json", body: text }, 502);
+      }
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        return json({ error: "Request timeout: MyRealTrip API took too long to respond" }, 504);
+      }
+      throw fetchError;
     }
   } catch (e: any) {
     return json({ error: e?.message ?? "internal error" }, 500);
