@@ -229,6 +229,133 @@ app.post("/api/mrt/partner/landing-url", async (req, res) => {
   }
 });
 
+// Create MyLink in real-time
+// POST /api/mrt/partner/mylink
+// body: { targetUrl: string, partnerId: string }
+app.post("/api/mrt/partner/mylink", async (req, res) => {
+  try {
+    const { targetUrl, partnerId } = req.body || {};
+    
+    if (!targetUrl) {
+      return res.status(400).json({ error: "targetUrl is required" });
+    }
+    
+    if (!partnerId) {
+      return res.status(400).json({ error: "partnerId is required" });
+    }
+    
+    // 파트너별 API 키 가져오기
+    const apiKeyEnvName = `MRT_PARTNER_API_KEY_${partnerId}`;
+    const apiKey = process.env[apiKeyEnvName];
+    
+    if (!apiKey) {
+      return res.status(500).json({ error: `API key not found for partner: ${partnerId}` });
+    }
+    
+    // 마이링크 생성 API 호출
+    const apiUrl = "https://partner-ext-api.myrealtrip.com/v1/mylink";
+    
+    try {
+      // generate-mylinks.ts와 동일한 방식으로 호출
+      const upstream = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ targetUrl }),
+      });
+      
+      const text = await upstream.text();
+      
+      if (!upstream.ok) {
+        console.error(`[mylink-api] Error ${upstream.status}: ${text.substring(0, 200)}`);
+        return res.status(502).json({ error: `mylink creation error ${upstream.status}`, body: text.substring(0, 500) });
+      }
+      
+      try {
+        const jsonObj = JSON.parse(text);
+        return res.json(jsonObj);
+      } catch {
+        return res.status(502).json({ error: "invalid upstream json", body: text.substring(0, 500) });
+      }
+    } catch (fetchError: any) {
+      // 네트워크 에러 상세 로깅
+      const errorMsg = fetchError?.message || String(fetchError);
+      console.error(`[mylink-api] Fetch failed:`, errorMsg);
+      
+      // 네트워크 에러인 경우 더 자세한 정보 제공
+      if (errorMsg.includes('fetch failed') || errorMsg.includes('ECONNREFUSED') || errorMsg.includes('timeout')) {
+        return res.status(503).json({ 
+          error: "Network error: Unable to connect to MyRealTrip API",
+          details: "This might be due to IP whitelist restrictions or network firewall. Try deploying to Vercel or check network connectivity.",
+          originalError: errorMsg
+        });
+      }
+      
+      throw fetchError; // 다른 에러는 상위로 전달
+    }
+  } catch (e: any) {
+    console.error(`[mylink-api] Unexpected error:`, e?.message || e);
+    res.status(500).json({ error: e?.message ?? "internal error" });
+  }
+});
+
+// Query stored MyLink from Supabase (deprecated - kept for backward compatibility)
+// GET /api/mrt/partner/mylink-query?partnerId=...&from=...&to=...&depdt=...&rtndt=...&tripDays=...&nonstop=...
+app.get("/api/mrt/partner/mylink-query", async (req, res) => {
+  try {
+    const partnerId = req.query.partnerId as string;
+    const from = req.query.from as string;
+    const to = req.query.to as string;
+    const depdt = req.query.depdt as string;
+    const rtndt = req.query.rtndt as string | undefined;
+    const tripDays = req.query.tripDays as string | undefined;
+    const nonstop = req.query.nonstop === "true";
+    
+    if (!partnerId || !from || !to || !depdt) {
+      return res.status(400).json({ error: "partnerId, from, to, depdt are required" });
+    }
+    
+    if (!hasSupabase) {
+      return res.status(500).json({ error: "Supabase env missing" });
+    }
+    
+    // Supabase에서 마이링크 조회
+    let query = supabase
+      .from("partner_mylinks")
+      .select("mylink")
+      .eq("partner_id", partnerId)
+      .eq("from", from)
+      .eq("to", to)
+      .eq("departure_date", depdt);
+    
+    if (rtndt) {
+      query = query.eq("return_date", rtndt);
+    }
+    
+    if (tripDays) {
+      query = query.eq("trip_days", Number(tripDays));
+    }
+    
+    query = query.eq("nonstop", nonstop);
+    
+    const { data, error } = await query.maybeSingle();
+    
+    if (error) {
+      return res.status(500).json({ error: `Supabase query error: ${error.message}` });
+    }
+    
+    if (!data || !data.mylink) {
+      return res.json({ mylink: null });
+    }
+    
+    return res.json({ mylink: data.mylink });
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message ?? "internal error" });
+  }
+});
+
 app.get("/api/calendar", async (req, res) => {
   try {
     const from = String(req.query.from ?? "");
@@ -324,6 +451,92 @@ app.post("/api/scan-all", async (req, res) => {
 app.get("/api/destinations", (req, res) => {
   const regions = Array.from(new Set(DESTINATIONS.map((d) => d.region)));
   res.json({ regions, destinations: DESTINATIONS });
+});
+
+// Korean holidays API (for PriceChart)
+app.get("/api/kr-holidays", async (req, res) => {
+  try {
+    const yearsParam = req.query.years as string | undefined;
+    const now = new Date();
+    const fallbackYears = [now.getFullYear(), now.getFullYear() + 1];
+    const years = yearsParam
+      ? yearsParam.split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n))
+      : fallbackYears;
+
+    const all: Array<{ date: string; localName: string; name: string }> = [];
+    for (const y of years) {
+      const r = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${y}/KR`);
+      if (!r.ok) continue;
+      const arr = (await r.json()) as any[];
+      for (const it of arr) {
+        all.push({ date: String(it.date), localName: String(it.localName ?? it.name ?? ""), name: String(it.name ?? it.localName ?? "") });
+      }
+    }
+
+    // sort and compress contiguous days
+    const items = all
+      .map((h) => ({ ...h, dt: new Date(h.date) }))
+      .sort((a, b) => a.dt.getTime() - b.dt.getTime());
+
+    const toISO = (d: Date): string => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const da = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${da}`;
+    };
+
+    const ranges: { startIso: string; endIso: string; label: string }[] = [];
+    let curStart: Date | null = null;
+    let curEnd: Date | null = null;
+    let labels: string[] = [];
+    const flush = () => {
+      if (!curStart || !curEnd) return;
+      const joined = labels.join(" ");
+      let label: string;
+      const hasSubstitute = labels.some((l) => /대체/.test(l));
+      if (labels.length === 1) {
+        label = labels[0] || "공휴일";
+      } else if (hasSubstitute) {
+        const base = labels.find((l) => !/대체/.test(l)) || "대체휴일";
+        label = `${base.replace(/\s*대체.*$/, "").trim()} 대체휴일`;
+      } else if (/설/.test(joined)) {
+        label = "설 연휴";
+      } else if (/추석/.test(joined)) {
+        label = "추석 연휴";
+      } else {
+        label = labels[0] || "공휴일";
+      }
+      ranges.push({ startIso: toISO(curStart), endIso: toISO(curEnd), label });
+      curStart = curEnd = null;
+      labels = [];
+    };
+    for (let i = 0; i < items.length; i++) {
+      const { dt, localName } = items[i];
+      if (!curStart) {
+        curStart = new Date(dt);
+        curEnd = new Date(dt);
+        labels = [localName];
+        continue;
+      }
+      const prev = curEnd as Date;
+      const next = new Date(prev);
+      next.setDate(next.getDate() + 1);
+      if (toISO(dt) === toISO(next)) {
+        curEnd = new Date(dt);
+        labels.push(localName);
+      } else {
+        flush();
+        curStart = new Date(dt);
+        curEnd = new Date(dt);
+        labels = [localName];
+      }
+    }
+    flush();
+
+    res.json({ count: ranges.length, ranges });
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message ?? "internal error" });
+  }
 });
 
 app.get("/api/latest", async (req, res) => {

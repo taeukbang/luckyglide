@@ -1,0 +1,66 @@
+마이 링크
+마이 링크 관련 API 목록입니다.
+
+마이 링크 생성
+POST
+/v1/mylink
+마케팅 파트너용 마이 링크를 생성합니다. 생성 대상 URL은 마이리얼트립 도메인만 허용됩니다.
+
+Path 파라미터
+targetUrl
+필수
+· string
+대상 URL (마이리얼트립 도메인만 허용)
+
+예시: https://www.myrealtrip.com/offers/123
+
+요청 예제
+cURL
+curl --request POST \
+  --url https://partner-ext-api.myrealtrip.com/v1/mylink \
+  --header 'Authorization: Bearer YOUR_API_KEY'
+
+응답 필드
+mylink
+*
+· string
+마이 링크
+
+응답 예제
+성공 응답
+요청이 성공하면 다음과 같은 형식으로 데이터가 반환됩니다.
+
+{
+  "data": {
+    "mylink": "https://myrealt.rip/abc123def456"
+  },
+  "meta": {},
+  "result": {
+    "status": 200,
+    "message": "SUCCESS",
+    "code": "success"
+  }
+}
+
+에러 응답
+요청 실패 시 다음과 같은 오류가 발생할 수 있습니다.
+
+400
+Bad Request
+필수 파라미터가 누락되었거나 형식이 올바르지 않습니다.
+
+응답 예시:
+
+{
+  "result": {
+    "status": 400,
+    "message": "요청 파라미터가 올바르지 않습니다"
+  }
+}
+
+해결 방법:
+
+필수 파라미터가 모두 포함되었는지 확인
+날짜 형식이 올바른지 확인 (yyyy-MM-dd)
+URL 형식이 허용된 도메인인지 확인
+파라미터 값의 타입이 올바른지 확인

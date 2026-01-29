@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { extractPartnerIdFromPath, isPartnerActive } from "./partner-config";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -158,6 +159,38 @@ export async function fetchMrtPartnerLandingUrl(input: {
   }
 }
 
+// ---- 마이링크 실시간 생성 API helper (frontend) ----
+// 예약 URL을 받아서 실시간으로 MyLink로 변환
+export async function createMylinkRealtime(targetUrl: string, partnerId: string): Promise<string | null> {
+  try {
+    const res = await fetch("/api/mrt/partner/mylink", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetUrl, partnerId }),
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const errorMsg = errorData?.error || errorData?.details || `HTTP ${res.status}`;
+      
+      // 네트워크 에러인 경우 사용자 친화적 메시지
+      if (res.status === 503 || errorMsg.includes('Network error') || errorMsg.includes('Unable to connect')) {
+        console.warn(`[MyLink 생성 실패 - 네트워크 문제] 로컬 환경에서 MyRealTrip API에 접속할 수 없습니다. Vercel 배포 후 정상 작동할 수 있습니다.`);
+      } else {
+        console.error(`[MyLink 생성 실패] ${res.status}:`, errorData);
+      }
+      return null;
+    }
+    
+    const data = await res.json().catch(() => ({}));
+    const mylink = data?.data?.mylink as string | undefined;
+    return mylink || null;
+  } catch (e: any) {
+    console.error(`[MyLink 생성 예외]:`, e?.message || e);
+    return null;
+  }
+}
+
 export async function resolveBookingUrlWithPartner(params: {
   from: string;
   to: string;
@@ -168,14 +201,12 @@ export async function resolveBookingUrlWithPartner(params: {
   utm?: string;
 }) {
   const { from, to, toNameKo, depdt, rtndt, nonstop, utm = "utm_source=luckyglide" } = params;
-  // Try partner landing URL first
-  const partner = await fetchMrtPartnerLandingUrl({
-    depAirportCd: from,
-    depDate: depdt,
-    arrAirportCd: to,
-    arrDate: rtndt ?? depdt,
-    tripTypeCd: rtndt && rtndt !== depdt ? "RT" : "OW",
-  });
+  
+  // 파트너 식별자 추출
+  const partnerId = extractPartnerIdFromPath();
+  const isPartner = isPartnerActive(partnerId);
+  
+  // UTM 파라미터 추가 헬퍼 함수
   const appendUtm = (u: string) => {
     try {
       const url = new URL(u);
@@ -191,9 +222,87 @@ export async function resolveBookingUrlWithPartner(params: {
       return u;
     }
   };
+  
+  // 파트너 경로인 경우 실시간으로 마이링크 생성
+  if (isPartner && partnerId) {
+    // 디버깅: 파트너 경로 감지 로그
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.log('[MyLink Debug] 파트너 경로 감지 - 실시간 MyLink 생성:', {
+        partnerId,
+        from,
+        to,
+        depdt,
+        rtndt: rtndt ?? depdt,
+        nonstop: !!nonstop,
+      });
+    }
+    
+    // 1. 예약 URL 생성
+    // Try partner landing URL first
+    let bookingUrl: string | null = null;
+    const partner = await fetchMrtPartnerLandingUrl({
+      depAirportCd: from,
+      depDate: depdt,
+      arrAirportCd: to,
+      arrDate: rtndt ?? depdt,
+      tripTypeCd: rtndt && rtndt !== depdt ? "RT" : "OW",
+    });
+    
+    if (partner?.url) {
+      bookingUrl = appendUtm(partner.url);
+    } else {
+      // Fallback to original web booking URL
+      const web = buildMrtBookingUrl(
+        { from, to, toNameKo, depdt, rtndt: rtndt ?? depdt },
+        { nonstop: !!nonstop }
+      );
+      bookingUrl = appendUtm(web);
+    }
+    
+    if (!bookingUrl) {
+      // 예약 URL 생성 실패 시 fallback
+      const web = buildMrtBookingUrl(
+        { from, to, toNameKo, depdt, rtndt: rtndt ?? depdt },
+        { nonstop: !!nonstop }
+      );
+      return applyMrtDeepLinkIfNeeded(appendUtm(web));
+    }
+    
+    // 2. 실시간으로 MyLink 생성
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.log('[MyLink Debug] 예약 URL 생성 완료, MyLink 변환 시작:', bookingUrl.substring(0, 100) + '...');
+    }
+    
+    const mylink = await createMylinkRealtime(bookingUrl, partnerId);
+    
+    if (mylink) {
+      if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+        console.log('[MyLink Debug] MyLink 생성 성공:', mylink.substring(0, 50) + '...');
+      }
+      return applyMrtDeepLinkIfNeeded(mylink);
+    }
+    
+    // 3. MyLink 생성 실패 시 원본 예약 URL 반환 (fallback)
+    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      console.warn('[MyLink Debug] MyLink 생성 실패, 원본 예약 URL 사용');
+    }
+    return applyMrtDeepLinkIfNeeded(bookingUrl);
+  }
+  
+  // 일반 경로인 경우 기존 로직 그대로 실행
+  // Try partner landing URL first
+  const partner = await fetchMrtPartnerLandingUrl({
+    depAirportCd: from,
+    depDate: depdt,
+    arrAirportCd: to,
+    arrDate: rtndt ?? depdt,
+    tripTypeCd: rtndt && rtndt !== depdt ? "RT" : "OW",
+  });
+  
   if (partner?.url) {
     return applyMrtDeepLinkIfNeeded(appendUtm(partner.url));
   }
+  
   // Fallback to original web booking URL
   const web = buildMrtBookingUrl(
     { from, to, toNameKo, depdt, rtndt: rtndt ?? depdt },

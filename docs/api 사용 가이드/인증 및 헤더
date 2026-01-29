@@ -1,0 +1,33 @@
+인증 및 헤더
+API 요청 시 필요한 인증 방식과 HTTP 헤더 설정에 대해 안내합니다.
+
+모든 API 요청은 Authorization 헤더에 유효한 API 키가 포함되어야 합니다.
+인증 방식
+Bearer 토큰 인증
+HTTP Authorization 헤더에 Bearer 스키마를 사용하여 API 키를 전달합니다.
+
+Authorization: Bearer YOUR_API_KEY
+
+헤더 구성
+필수
+Authorization
+Bearer 토큰 형식의 API 키를 포함하는 헤더
+
+필수
+Content-Type
+요청 본문의 미디어 타입 (일반적으로 application/json)
+
+인증 요청 예제
+올바른 인증 요청
+curl -X GET "https://partner-ext-api.myrealtrip.com/v1/revenues?startDate=2025-01-01&endDate=2025-01-07" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+잘못된 인증 요청
+❌ Authorization 헤더 누락
+
+curl -X GET "https://partner-ext-api.myrealtrip.com/v1/revenues?startDate=2025-01-01&endDate=2025-01-07"
+
+❌ Bearer 접두사 누락
+
+curl -X GET "https://partner-ext-api.myrealtrip.com/v1/revenues?startDate=2025-01-01&endDate=2025-01-07" \
+  -H "Authorization: YOUR_API_KEY"

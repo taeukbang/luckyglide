@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "server:dev": "tsx -r dotenv/config server/index.ts",
-    "dev:all": "concurrently \"npm:server:dev\" \"npm:dev\""
+    "dev:all": "concurrently \"npm:server:dev\" \"npm:dev\"",
+    "generate-mylinks": "tsx -r dotenv/config scripts/generate-mylinks.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

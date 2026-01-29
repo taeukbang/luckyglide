@@ -1,5 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceArea, ReferenceLine } from "recharts";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { buildMrtBookingUrl, addDaysIsoKST, weekdayKo, applyMrtDeepLinkIfNeeded, resolveBookingUrlWithPartner } from "@/lib/utils";
 import { gaEvent } from "@/lib/ga";
 import { buildHolidayRangesForDomain, HolidayRangeIso } from "@/lib/holidays";
@@ -336,7 +336,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
             })();
             const shadeRGBA = "rgba(239, 68, 68, 0.12)"; // unified color for fill & line
             return (
-              <>
+              <React.Fragment key={`holiday-${h.startMMDD}-${h.endMMDD}-${idx}`}>
                 {/* Always shade (even single-day) */}
                 <ReferenceArea key={`area-${idx}`} x1={h.startMMDD} x2={h.endMMDD} fill={shadeRGBA} ifOverflow="extendDomain" />
                 {/* Extra vertical line for single-day to increase visibility */}
@@ -346,7 +346,7 @@ export const PriceChart = ({ data, tripDays, bookingFromCode = "ICN", bookingToC
                 {!isWeekendOnly ? (
                   <ReferenceLine key={`label-${idx}`} x={mid} strokeOpacity={0} label={{ value: h.label, position: "insideTop", dy, fill: "hsl(var(--foreground))", fontSize: 10 }} />
                 ) : null}
-              </>
+              </React.Fragment>
             );
           })}
         </LineChart>

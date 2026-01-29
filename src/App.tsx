@@ -22,8 +22,9 @@ const App = () => (
           <Route path="/verify" element={<Verify />} />
           <Route path="/direct-test" element={<DirectTest />} />
           <Route path="/mrt-partner-test" element={<MrtPartnerTest />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+          {/* 파트너 경로: 예약된 경로가 아닌 모든 경로는 Index 컴포넌트로 처리 */}
+          {/* Index 컴포넌트 내에서 extractPartnerIdFromPath()로 파트너 ID 추출 */}
+          <Route path="*" element={<Index />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
