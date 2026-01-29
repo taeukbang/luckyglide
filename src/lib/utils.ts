@@ -289,29 +289,40 @@ export async function resolveBookingUrlWithPartner(params: {
       return applyMrtDeepLinkIfNeeded(appendUtm(web));
     }
     
-    // 2. 즉시 원본 URL 반환하고, 백그라운드에서 MyLink 생성 시도
+    // 2. MyLink 생성 시도 (최대 5초 대기, 타임아웃되면 원본 URL 사용)
     if (typeof window !== 'undefined') {
-      console.log('[MyLink Debug] 예약 URL 생성 완료, 백그라운드에서 MyLink 생성 시작:', bookingUrl?.substring(0, 100) + '...');
-      
-      // 백그라운드에서 MyLink 생성 시도 (비동기, await 안 함)
-      createMylinkRealtime(bookingUrl, partnerId).then((mylink) => {
-        if (mylink) {
-          console.log('[MyLink Debug] ✅ 백그라운드 MyLink 생성 성공:', mylink.substring(0, 100) + '...');
-          // 현재 페이지가 예약 페이지인 경우에만 리다이렉트
-          const currentUrl = window.location.href;
-          if (currentUrl.includes('flights.myrealtrip.com')) {
-            console.log('[MyLink Debug] 예약 페이지로 리다이렉트:', mylink.substring(0, 50) + '...');
-            window.location.href = applyMrtDeepLinkIfNeeded(mylink);
-          }
-        }
-      }).catch((error) => {
-        console.warn('[MyLink Debug] 백그라운드 MyLink 생성 실패:', error);
-      });
+      console.log('[MyLink Debug] 예약 URL 생성 완료, MyLink 변환 시작:', bookingUrl?.substring(0, 100) + '...');
     }
     
-    // 즉시 원본 예약 URL 반환 (사용자는 바로 이동)
+    // 5초 타임아웃으로 빠르게 실패하고 원본 URL로 이동
+    const mylinkPromise = createMylinkRealtime(bookingUrl, partnerId);
+    const timeoutPromise = new Promise<string | null>((resolve) => {
+      setTimeout(() => resolve(null), 5000); // 5초 후 타임아웃
+    });
+    
+    const mylink = await Promise.race([mylinkPromise, timeoutPromise]);
+    
+    if (mylink) {
+      if (typeof window !== 'undefined') {
+        console.log('[MyLink Debug] ✅ MyLink 생성 성공:', mylink.substring(0, 100) + '...');
+      }
+      return applyMrtDeepLinkIfNeeded(mylink);
+    }
+    
+    // 3. MyLink 생성이 5초 내에 완료되지 않으면 원본 예약 URL 반환
+    // 백그라운드에서 계속 MyLink 생성 시도 (하지만 리다이렉트는 하지 않음 - 추적 보장)
     if (typeof window !== 'undefined') {
-      console.log('[MyLink Debug] 즉시 원본 예약 URL로 이동, 백그라운드에서 MyLink 생성 중...');
+      console.warn('[MyLink Debug] ⚠️ MyLink 생성이 5초 내에 완료되지 않아 원본 예약 URL을 사용합니다.');
+      console.warn('[MyLink Debug] ⚠️ 파트너 추적이 적용되지 않을 수 있습니다.');
+      
+      // 백그라운드에서 계속 시도하되, 리다이렉트는 하지 않음 (추적 보장)
+      mylinkPromise.then((bgMylink) => {
+        if (bgMylink) {
+          console.log('[MyLink Debug] ✅ 백그라운드 MyLink 생성 성공 (리다이렉트 안 함 - 추적 보장):', bgMylink.substring(0, 50) + '...');
+        }
+      }).catch(() => {
+        // 백그라운드 생성 실패는 무시
+      });
     }
     
     // bookingUrl이 없으면 기본 예약 URL 생성
