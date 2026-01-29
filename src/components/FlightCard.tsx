@@ -227,14 +227,17 @@ export const FlightCard = ({
                   tripDays: meta?.tripDays,
                 });
                 e.preventDefault();
-                // 팝업 차단 방지: 클릭 이벤트 내에서 즉시 빈 창 열기
-                const newWindow = window.open("about:blank", "_blank", "noopener");
-                if (!newWindow) {
-                  console.warn('[예약하기] 팝업이 차단되었습니다.');
-                  return;
-                }
                 
                 try {
+                  // 로딩 페이지를 먼저 열기 (팝업 차단 방지)
+                  const loadingUrl = `/booking-loading.html?url=${encodeURIComponent('about:blank')}`;
+                  const newWindow = window.open(loadingUrl, "_blank", "noopener");
+                  if (!newWindow) {
+                    console.warn('[예약하기] 팝업이 차단되었습니다.');
+                    return;
+                  }
+                  
+                  // URL 준비
                   const finalUrl = await resolveBookingUrlWithPartner({
                     from: "ICN",
                     to: meta?.code ?? "",
@@ -243,9 +246,11 @@ export const FlightCard = ({
                     rtndt: retIso,
                     nonstop: Boolean(nonstop),
                   });
+                  
                   if (finalUrl) {
-                    console.log('[예약하기] URL 열기:', finalUrl.substring(0, 100));
-                    newWindow.location.href = finalUrl;
+                    console.log('[예약하기] URL 준비 완료, 리다이렉트:', finalUrl.substring(0, 100));
+                    // 로딩 페이지에서 실제 URL로 리다이렉트
+                    newWindow.location.href = `/booking-loading.html?url=${encodeURIComponent(finalUrl)}`;
                   } else {
                     console.error('[예약 URL 오류] finalUrl이 null입니다.');
                     newWindow.close();
@@ -259,13 +264,14 @@ export const FlightCard = ({
                       { nonstop: Boolean(nonstop) }
                     );
                     if (fallbackUrl) {
-                      newWindow.location.href = fallbackUrl;
-                    } else {
-                      newWindow.close();
+                      const newWindow = window.open(`/booking-loading.html?url=${encodeURIComponent(fallbackUrl)}`, "_blank", "noopener");
+                      if (!newWindow) {
+                        // 팝업 차단 시 현재 창에서 이동
+                        window.location.href = fallbackUrl;
+                      }
                     }
                   } catch (fallbackError) {
                     console.error('[Fallback URL 오류]', fallbackError);
-                    newWindow.close();
                   }
                 }
               }}

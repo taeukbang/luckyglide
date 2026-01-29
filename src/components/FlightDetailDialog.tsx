@@ -208,14 +208,17 @@ export const FlightDetailDialog = ({
                 const retIso = addDaysIsoKST(depIso, days - 1);
                 gaEvent('click_detail', { code, city, depdt: depIso, rtndt: retIso, nonstop: Boolean(nonstop), price: best.price, tripDays: days });
                 e.preventDefault();
-                // 팝업 차단 방지: 클릭 이벤트 내에서 즉시 빈 창 열기
-                const newWindow = window.open("about:blank", "_blank", "noopener");
-                if (!newWindow) {
-                  console.warn('[예약하기] 팝업이 차단되었습니다.');
-                  return;
-                }
                 
                 try {
+                  // 로딩 페이지를 먼저 열기 (팝업 차단 방지)
+                  const loadingUrl = `/booking-loading.html?url=${encodeURIComponent('about:blank')}`;
+                  const newWindow = window.open(loadingUrl, "_blank", "noopener");
+                  if (!newWindow) {
+                    console.warn('[예약하기] 팝업이 차단되었습니다.');
+                    return;
+                  }
+                  
+                  // URL 준비
                   const finalUrl = await resolveBookingUrlWithPartner({
                     from: "ICN",
                     to: code,
@@ -224,14 +227,31 @@ export const FlightDetailDialog = ({
                     rtndt: retIso,
                     nonstop: Boolean(nonstop),
                   });
+                  
                   if (finalUrl) {
-                    newWindow.location.href = finalUrl;
+                    // 로딩 페이지에서 실제 URL로 리다이렉트
+                    newWindow.location.href = `/booking-loading.html?url=${encodeURIComponent(finalUrl)}`;
                   } else {
                     newWindow.close();
                   }
                 } catch (error) {
                   console.error('[예약 URL 오류]', error);
-                  if (newWindow) newWindow.close();
+                  // 에러 발생 시에도 기본 예약 URL 사용
+                  try {
+                    const fallbackUrl = buildMrtBookingUrl(
+                      { from: "ICN", to: code, toNameKo: city, depdt: depIso, rtndt: retIso },
+                      { nonstop: Boolean(nonstop) }
+                    );
+                    if (fallbackUrl) {
+                      const newWindow = window.open(`/booking-loading.html?url=${encodeURIComponent(fallbackUrl)}`, "_blank", "noopener");
+                      if (!newWindow) {
+                        // 팝업 차단 시 현재 창에서 이동
+                        window.location.href = fallbackUrl;
+                      }
+                    }
+                  } catch (fallbackError) {
+                    console.error('[Fallback URL 오류]', fallbackError);
+                  }
                 }
               }}
             >
