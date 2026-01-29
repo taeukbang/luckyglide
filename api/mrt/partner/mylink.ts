@@ -37,9 +37,9 @@ export default async function handler(req: Request): Promise<Response> {
     // 마이링크 생성 API 호출
     const apiUrl = "https://partner-ext-api.myrealtrip.com/v1/mylink";
     
-    // 타임아웃 설정 (8초 - Vercel 10초 제한 내에서 최대한 기다림)
+    // 타임아웃 설정 (9초 - Vercel 10초 제한 내에서 최대한 기다림)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
     
     try {
       const upstream = await fetch(apiUrl, {
