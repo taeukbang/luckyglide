@@ -1,4 +1,7 @@
-export const config = { runtime: "edge" };
+export const config = { 
+  runtime: "nodejs", // edge runtime은 타임아웃이 짧아서 nodejs로 변경
+  maxDuration: 30, // Vercel 타임아웃 30초로 설정
+};
 
 function corsHeaders() {
   return { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST,OPTIONS" };
