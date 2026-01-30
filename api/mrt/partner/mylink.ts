@@ -36,12 +36,16 @@ export default async function handler(req: Request): Promise<Response> {
     
     // 마이링크 생성 API 호출 (재시도 로직 포함)
     const apiUrl = "https://partner-ext-api.myrealtrip.com/v1/mylink";
-    const maxRetries = 2; // 최대 2회 재시도
-    const timeoutPerAttempt = 4000; // 각 시도당 4초 타임아웃
-    
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutPerAttempt);
+    const proxyResponse = await fetch(`${proxyUrl}/mylink`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true", // Ngrok 경고 페이지 건너뛰기
+            "User-Agent": "LuckyGlide-Vercel/1.0"
+          },
+          body: JSON.stringify({ targetUrl, partnerId }),
+          signal: controller.signal,
+        });
       
       try {
         const startTime = Date.now();
