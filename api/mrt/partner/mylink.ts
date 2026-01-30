@@ -26,7 +26,7 @@ export default async function handler(req: Request): Promise<Response> {
       return json({ error: "partnerId is required" }, 400);
     }
     
-        // 🎯 로컬 프록시 사용 (IP 화이트리스트 문제 해결)
+    // 🎯 로컬 프록시 사용 (IP 화이트리스트 문제 해결)
     const proxyUrl = process.env.PROXY_URL;
     
     if (proxyUrl) {
@@ -75,6 +75,24 @@ export default async function handler(req: Request): Promise<Response> {
     
     // 마이링크 생성 API 호출 (재시도 로직 포함)
     const apiUrl = "https://partner-ext-api.myrealtrip.com/v1/mylink";
+    const maxRetries = 2; // 최대 2회 재시도
+    const timeoutPerAttempt = 4000; // 각 시도당 4초 타임아웃
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutPerAttempt);
+      
+      try {
+        const startTime = Date.now();
+        const upstream = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            "Connection": "keep-alive", // 연결 재사용
+          },
+          body: JSON.stringify({ targetUrl }),
+          signal: controller.signal,
         });
         
         clearTimeout(timeoutId);
