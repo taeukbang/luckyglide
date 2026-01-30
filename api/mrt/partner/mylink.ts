@@ -26,6 +26,45 @@ export default async function handler(req: Request): Promise<Response> {
       return json({ error: "partnerId is required" }, 400);
     }
     
+        // 🎯 로컬 프록시 사용 (IP 화이트리스트 문제 해결)
+    const proxyUrl = process.env.PROXY_URL;
+    
+    if (proxyUrl) {
+      console.log(`[Vercel] 로컬 프록시 사용: ${proxyUrl}/mylink`);
+      
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15초 타임아웃
+        
+        const proxyResponse = await fetch(`${proxyUrl}/mylink`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true", // Ngrok 경고 페이지 건너뛰기
+            "User-Agent": "LuckyGlide-Vercel/1.0"
+          },
+          body: JSON.stringify({ targetUrl, partnerId }),
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        const data = await proxyResponse.json();
+        
+        console.log(`[Vercel] 로컬 프록시 응답: ${proxyResponse.status}`);
+        return json(data, proxyResponse.status);
+      } catch (error: any) {
+        console.error('[Vercel] 로컬 프록시 오류:', error.message);
+        return json({ 
+          error: "Local proxy unavailable",
+          details: error.message,
+          hint: "로컬 프록시 서버와 ngrok/cloudflare tunnel이 실행 중인지 확인하세요"
+        }, 503);
+      }
+    }
+    
+    // ⚠️ 프록시 없음: 직접 호출 (IP 화이트리스트 필요)
+    console.log('[Vercel] 경고: PROXY_URL 미설정, 직접 호출 시도');
+    
     // 파트너별 API 키 가져오기
     const apiKeyEnvName = `MRT_PARTNER_API_KEY_${partnerId}`;
     const apiKey = process.env[apiKeyEnvName];
@@ -36,28 +75,6 @@ export default async function handler(req: Request): Promise<Response> {
     
     // 마이링크 생성 API 호출 (재시도 로직 포함)
     const apiUrl = "https://partner-ext-api.myrealtrip.com/v1/mylink";
-    const proxyResponse = await fetch(`${proxyUrl}/mylink`, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "true", // Ngrok 경고 페이지 건너뛰기
-            "User-Agent": "LuckyGlide-Vercel/1.0"
-          },
-          body: JSON.stringify({ targetUrl, partnerId }),
-          signal: controller.signal,
-        });
-      
-      try {
-        const startTime = Date.now();
-        const upstream = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            "Connection": "keep-alive", // 연결 재사용
-          },
-          body: JSON.stringify({ targetUrl }),
-          signal: controller.signal,
         });
         
         clearTimeout(timeoutId);
