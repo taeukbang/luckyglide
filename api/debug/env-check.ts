@@ -24,3 +24,8 @@ export default async function handler(req: Request): Promise<Response> {
   
   return json(debugInfo);
 }
+<<<<<<< Updated upstream
+=======
+
+
+>>>>>>> Stashed changes

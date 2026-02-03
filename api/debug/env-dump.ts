@@ -24,3 +24,7 @@ export default async function handler(req: Request): Promise<Response> {
     { status: 200, headers }
   );
 }
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
