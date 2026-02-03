@@ -3,12 +3,52 @@ export const config = {
   maxDuration: 10, // Vercel 무료 플랜은 10초 제한
 };
 
+import { createClient } from "@supabase/supabase-js";
+
 function corsHeaders() {
   return { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST,OPTIONS" };
 }
 
 function json(body: any, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...corsHeaders() } });
+}
+
+// 📊 통계 기록 함수 (비동기, 실패해도 무시)
+async function recordStats(partnerId: string) {
+  try {
+    const SUPABASE_URL = process.env.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+    
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.log('[Stats] Supabase 환경변수 없음, 통계 기록 생략');
+      return;
+    }
+    
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // 한국 시간 기준 오늘 날짜
+    const kstDate = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' })
+    );
+    const today = kstDate.toISOString().split('T')[0];
+    
+    console.log(`[Stats] 기록 중: ${partnerId} / ${today}`);
+    
+    // 카운터 증가 (원자적)
+    const { error } = await supabase.rpc('increment_mylink_count', {
+      p_partner_id: partnerId,
+      p_date: today
+    });
+    
+    if (error) {
+      console.error('[Stats] 기록 실패:', error.message);
+    } else {
+      console.log('[Stats] ✅ 기록 완료');
+    }
+  } catch (err: any) {
+    console.error('[Stats] 예외 발생:', err.message);
+    // 통계 실패해도 무시 (사용자 응답에 영향 없음)
+  }
 }
 
 export default async function handler(req: Request): Promise<Response> {
@@ -25,6 +65,55 @@ export default async function handler(req: Request): Promise<Response> {
     if (!partnerId) {
       return json({ error: "partnerId is required" }, 400);
     }
+    
+    // 🎯 로컬 프록시 사용 (터널링을 통한 로컬 PC 접근)
+    const proxyUrl = process.env.PROXY_URL;
+    
+    // 🔍 디버깅: 환경변수 출력
+    console.log(`[Vercel] PROXY_URL 환경변수: ${proxyUrl || 'NOT SET'}`);
+    console.log(`[Vercel] PROXY 관련 환경변수: ${Object.keys(process.env).filter(k => k.includes('PROXY')).join(', ')}`);
+    
+    if (proxyUrl) {
+      console.log(`[Vercel] ✅ 로컬 프록시 사용: ${proxyUrl}/mylink`);
+      
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8초 타임아웃 (Vercel 10초 제한 고려)
+        
+        const proxyResponse = await fetch(`${proxyUrl}/mylink`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "ngrok-skip-browser-warning": "true",
+            "User-Agent": "LuckyGlide-Vercel/1.0"
+          },
+          body: JSON.stringify({ targetUrl, partnerId }),
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        const data = await proxyResponse.json();
+        
+        console.log(`[Vercel] 로컬 프록시 응답: ${proxyResponse.status}`);
+        
+        // 📊 성공 시 통계 기록 (비동기, 실패해도 무시)
+        if (proxyResponse.ok) {
+          recordStats(partnerId).catch(() => {});
+        }
+        
+        return json(data, proxyResponse.status);
+      } catch (error: any) {
+        console.error('[Vercel] 로컬 프록시 오류:', error.message);
+        return json({ 
+          error: "Local proxy unavailable",
+          details: error.message,
+          hint: "로컬 프록시 서버와 터널링 도구가 실행 중인지 확인하세요"
+        }, 503);
+      }
+    }
+    
+    // ⚠️ 프록시 없음: 직접 호출 (로컬 VPN 환경 필요)
+    console.log('[Vercel] ⚠️ PROXY_URL 미설정! 직접 호출 시도');
     
     // 파트너별 API 키 가져오기
     const apiKeyEnvName = `MRT_PARTNER_API_KEY_${partnerId}`;
@@ -50,7 +139,7 @@ export default async function handler(req: Request): Promise<Response> {
           headers: {
             "Authorization": `Bearer ${apiKey}`,
             "Content-Type": "application/json",
-            "Connection": "keep-alive", // 연결 재사용
+            "Connection": "keep-alive",
           },
           body: JSON.stringify({ targetUrl }),
           signal: controller.signal,
@@ -75,6 +164,10 @@ export default async function handler(req: Request): Promise<Response> {
           if (attempt > 0) {
             console.log(`[MyLink] 재시도 ${attempt}회 후 성공 (${elapsed}ms)`);
           }
+          
+          // 📊 성공 시 통계 기록 (비동기, 실패해도 무시)
+          recordStats(partnerId).catch(() => {});
+          
           return json(jsonObj);
         } catch {
           return json({ error: "invalid upstream json", body: text }, 502);
