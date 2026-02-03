@@ -1,6 +1,6 @@
 export const config = { 
   runtime: "nodejs",
-  maxDuration: 10, // Vercel 무료 플랜은 10초 제한
+  maxDuration: 10,
 };
 
 import { createClient } from "@supabase/supabase-js";
